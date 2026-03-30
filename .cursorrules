@@ -1,0 +1,26 @@
+# Collection Module Template Project Rules
+
+## Architecture Context
+
+For conversations about code architecture, building features, or refactoring, use the project's Cursor skills in `collection_module/.cursor/skills/`. Skills are auto-discovered; relevant ones include:
+
+- **collection-module-build** — Build a complete module from a provider spec/API doc (start here for new providers)
+- **collection-module-architecture** — Layer structure, directory layout, DI overview
+- **collection-module-patterns** — Services, Controllers, Clients, Adapters, error handling
+- **collection-module-setup** — Configuration and environment
+- **collection-module-integration** — Webhooks, lifecycle hooks, provider customization
+- **collection-module-testing** — Jest, mocking, coverage
+- **collection-module-ops** — Deployment, CI/CD, logging, best practices
+
+## Build From Spec
+
+When asked to build a provider from a spec, API doc, URL, or PDF, follow the SOP at:
+
+> `collection_module/docs/14-BUILD-FROM-SPEC.md`
+
+Quick path:
+1. Extract spec: `npm run extract:spec -- --input=<source> --output=docs/provider-spec.md`
+2. Scaffold: `npm run scaffold:provider -- --from-spec=docs/provider-spec.md --reason="<why>"`
+3. Implement stubs using `collection_module/docs/STRIPE-REFERENCE.md` as the pattern
+4. Wire DI container, webhooks, lifecycle hooks, env.sample.ts
+5. Run `npm test` then `/review-implementation`
