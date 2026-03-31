@@ -1,0 +1,21 @@
+{
+  "include": [
+    "./code/**/*"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "es2022"
+    ],
+    "module": "es2022",
+    "target": "es2022",
+    "skipLibCheck": true,
+    "allowJs": true,
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "downlevelIteration": true,
+    "noEmit": true,
+    "types": [
+      "jest"
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "name": "collection-module-template",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "dependencies": {
+    "joi": "^17.13.3",
+    "moment-timezone": "0.5.40",
+    "node-fetch": "2.6.7",
+    "phone": "2.4.22",
+    "@anthropic-ai/sdk": "^0.27.0",
+    "pdf-parse": "^1.1.1",
+    "stripe": "^19.2.1",
+    "@rootplatform/node-sdk": "^0.0.7"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.11.20",
+    "@types/node-fetch": "^2.6.11",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-typescript": "^18.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-webpack": "^0.13.2",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-mocha": "^10.5.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-sonarjs": "^0.25.1",
+    "eslint-plugin-unicorn": "^55.0.0",
+    "jest": "^30.2.0",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.4.5"
+  },
+  "scripts": {
+    "validate": "bash scripts/validate-config.sh",
+    "lint": "eslint code --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint --fix code --ext .js,.jsx,.ts,.tsx",
+    "prettier-check": "npx prettier --check code/",
+    "prettier-write": "prettier --write code/",
+    "format": "npm run prettier-write && npm run lint:fix",
+    "build": "rm -rf ./dist && tsc --project tsconfig.build.json",
+    "build:watch": "tsc --project tsconfig.build.json --watch",
+    "clean": "rm -rf ./dist ./coverage",
+    "test": "jest --forceExit",
+    "test:unit": "jest --forceExit --testPathPattern='__tests__/(services|core|utils)'",
+    "test:integration": "jest --forceExit --testPathPattern='__tests__/integration'",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --forceExit --coverage",
+    "test:ci": "jest --ci --forceExit --coverage --maxWorkers=2",
+    "precommit": "npm run lint && npm run test",
+    "prepush": "npm run lint && npm run test && npm run build",
+    "setup": "node ../scripts/setup.js",
+    "scaffold:provider": "node scripts/scaffold-provider.js",
+    "extract:spec": "node scripts/extract-spec.js",
+    "log:action": "node scripts/log-action.js",
+    "predeploy": "npm run validate && npm run test && npm run build",
+    "deploy:sandbox": "bash scripts/deploy.sh sandbox",
+    "deploy:production": "bash scripts/deploy.sh production",
+    "deploy:dry-run:sandbox": "bash scripts/deploy.sh --dry-run sandbox",
+    "deploy:dry-run:production": "bash scripts/deploy.sh --dry-run production"
+  },
+  "engines": {
+    "npm": ">=8.0.0",
+    "node": ">=18.0.0"
+  }
+}

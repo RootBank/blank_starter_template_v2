@@ -30,9 +30,16 @@
 ## Key Commands
 
 ```bash
+# First-time setup (run once after cloning)
 cd collection_module
+npm run setup -- --cm-key=cm_myprovider_yourco --org-id=your-org-id --reason="initial setup"
+npm run setup -- --help   # full options
+
+# Build a new provider
 npm run scaffold:provider -- --provider=MyProvider --api-type=http --base-url=https://... --reason="why"
 npm run extract:spec -- --input=./api-docs.md --output=docs/my-provider-spec.md
+
+# Dev
 npm test
 npm run build
 npm run lint

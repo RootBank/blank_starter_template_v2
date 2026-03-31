@@ -1,0 +1,10 @@
+{
+  "collectionModuleKey": "my_collection_module_cm_stripe",
+  "collectionModuleName": "Stripe Collection Module",
+  "organizationId": "00000000-0000-0000-0000-000000000001",
+  "host": "http://localhost:4000",
+  "settings": {
+    "legacyCodeExecution": false
+  },
+  "manualTransactions": []
+}
