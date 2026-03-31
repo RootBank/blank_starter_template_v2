@@ -279,8 +279,9 @@ Instructions:
 
 Return the complete filled SPEC-TEMPLATE.md content now:`;
 
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model,
     max_tokens: 4096,
     messages: [{ role: 'user', content: prompt }],
   });

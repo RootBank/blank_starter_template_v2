@@ -2,15 +2,9 @@
 
 ## Architecture Context
 
-For conversations about code architecture, building features, or refactoring, use the project's Cursor skills in `collection_module/.cursor/skills/`. Skills are auto-discovered; relevant ones include:
+For conversations about code architecture, building features, or refactoring, use the Cursor rule at `.cursor/rules/build-from-spec.mdc`. The canonical SOP lives at:
 
-- **collection-module-build** — Build a complete module from a provider spec/API doc (start here for new providers)
-- **collection-module-architecture** — Layer structure, directory layout, DI overview
-- **collection-module-patterns** — Services, Controllers, Clients, Adapters, error handling
-- **collection-module-setup** — Configuration and environment
-- **collection-module-integration** — Webhooks, lifecycle hooks, provider customization
-- **collection-module-testing** — Jest, mocking, coverage
-- **collection-module-ops** — Deployment, CI/CD, logging, best practices
+> `collection_module/docs/14-BUILD-FROM-SPEC.md`
 
 ## Build From Spec
 

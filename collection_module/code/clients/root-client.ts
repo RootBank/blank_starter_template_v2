@@ -1,19 +1,44 @@
 /**
  * Root Platform Client
  *
- * Singleton instance of the Root SDK Client initialized with configuration.
+ * Class wrapper around the Root SDK, registered in the DI container.
+ * Resolves config at construction time so it works correctly with the
+ * singleton lifetime in container.setup.ts.
  *
  * @example
- * import rootClient from './clients/root-client';
+ * // Resolved via DI — do not instantiate directly in application code:
+ * const rootClient = container.resolve<RootClient>(ServiceToken.ROOT_CLIENT);
  * const policy = await rootClient.getPolicyById({ policyId: 'pol_123' });
  */
 import { RootSDKClient } from '@rootplatform/node-sdk';
 import { getConfigService } from '../services/config-instance';
 
-const config = getConfigService();
-const apiKey = config.get('rootApiKey');
-const baseUrl = config.get('rootBaseUrl');
+export class RootClient {
+  private readonly sdk: RootSDKClient;
 
-const rootClient = new RootSDKClient(apiKey, baseUrl);
+  constructor() {
+    const config = getConfigService();
+    this.sdk = new RootSDKClient(
+      config.get('rootApiKey'),
+      config.get('rootBaseUrl')
+    );
+  }
 
-export default rootClient;
+  getPolicyById(params: { policyId: string }) {
+    return this.sdk.getPolicyById(params);
+  }
+
+  updatePaymentsAsync(params: Parameters<RootSDKClient['updatePaymentsAsync']>[0]) {
+    return this.sdk.updatePaymentsAsync(params);
+  }
+
+  getPolicyPaymentMethod(params: Parameters<RootSDKClient['getPolicyPaymentMethod']>[0]) {
+    return this.sdk.getPolicyPaymentMethod(params);
+  }
+
+  updatePolicy(params: Parameters<RootSDKClient['updatePolicy']>[0]) {
+    return this.sdk.updatePolicy(params);
+  }
+}
+
+export default RootClient;

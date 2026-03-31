@@ -13,7 +13,6 @@
     "phone": "2.4.22",
     "@anthropic-ai/sdk": "^0.27.0",
     "pdf-parse": "^1.1.1",
-    "stripe": "^19.2.1",
     "@rootplatform/node-sdk": "^0.0.7"
   },
   "devDependencies": {

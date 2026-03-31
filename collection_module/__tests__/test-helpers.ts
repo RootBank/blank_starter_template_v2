@@ -2,10 +2,14 @@
  * Test Helpers
  *
  * Centralized mock factories for use across tests.
- * After scaffolding your provider, add a createMockProviderClient() helper here.
+ *
+ * After scaffolding your provider, extend createMockProviderClient() with
+ * the methods your generated client exposes via `client.sdk`.
  *
  * See: docs/10-TESTING.md for testing patterns
  */
+
+// ── Core service mocks ────────────────────────────────────────────────────────
 
 /**
  * Create a mock LogService
@@ -21,11 +25,11 @@ export function createMockLogService() {
 }
 
 /**
- * Create a mock ConfigService
+ * Create a mock ConfigService.
  * Uses provider-agnostic keys matching ConfigurationService.get() calls.
  *
- * TODO: After scaffolding, extend this with any provider-specific config keys
- * your service reads via config.get('providerXxx').
+ * After scaffolding, extend the config map with any provider-specific keys
+ * your service reads (e.g. config.get('providerProductId')).
  */
 export function createMockConfigService() {
   return {
@@ -40,7 +44,7 @@ export function createMockConfigService() {
         rootBaseUrl: 'https://sandbox.rootplatform.com/v1/insurance',
         rootCollectionModuleKey: 'cm_test',
       };
-      return config[key] || null;
+      return config[key] ?? null;
     }),
   };
 }
@@ -52,6 +56,8 @@ export function setupConfigMock() {
   const { getConfigService } = require('../code/services/config-instance');
   getConfigService.mockReturnValue(createMockConfigService());
 }
+
+// ── Root client / service mocks ───────────────────────────────────────────────
 
 /**
  * Create a mock Root API client
@@ -75,17 +81,69 @@ export function createMockRootService() {
   };
 }
 
+// ── Provider client mock ──────────────────────────────────────────────────────
+
 /**
- * Create a mock provider client
+ * Create a mock provider client.
  *
- * TODO: Replace this stub with a mock that matches your generated provider client.
- * For an SDK-based provider:
- *   return { sdk: { customers: { create: jest.fn() }, ... } };
- * For an HTTP-based provider:
- *   return { post: jest.fn(), get: jest.fn(), verifyWebhookSignature: jest.fn() };
+ * The shape of `sdk` depends on your provider type:
+ *
+ * For HTTP-based providers (BaseHttpClient), mock the HTTP verbs:
+ *   sdk: { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() }
+ *
+ * For SDK-based providers, mock the SDK namespace your service calls:
+ *   sdk: {
+ *     customers: { create: jest.fn(), retrieve: jest.fn() },
+ *     payments:  { create: jest.fn(), retrieve: jest.fn() },
+ *   }
+ *
+ * Example (GoCardless SDK):
+ *   export function createMockGoCardlessClient() {
+ *     return {
+ *       sdk: {
+ *         customers: { create: jest.fn(), find: jest.fn() },
+ *         payments:  { create: jest.fn(), find: jest.fn() },
+ *         mandates:  { create: jest.fn(), cancel: jest.fn() },
+ *       },
+ *       verifyWebhookSignature: jest.fn().mockReturnValue(true),
+ *     };
+ *   }
  */
 export function createMockProviderClient() {
   return {
+    sdk: {
+      // HTTP verbs (for BaseHttpClient providers)
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+    },
     verifyWebhookSignature: jest.fn().mockReturnValue(true),
+  };
+}
+
+// ── Webhook helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Build a raw webhook request object as the Root Platform delivers it.
+ *
+ * @param eventType - The provider event type string (e.g. 'payment.paid_out')
+ * @param payload   - The event body data
+ * @param headers   - Additional/override headers (e.g. your provider's signature header)
+ */
+export function createMockWebhookRequest(
+  eventType: string,
+  payload: Record<string, any> = {},
+  headers: Record<string, string> = {}
+) {
+  const body = JSON.stringify({ type: eventType, ...payload });
+  return {
+    request: {
+      headers: {
+        'content-type': 'application/json',
+        ...headers,
+      },
+      body: Buffer.from(body),
+    },
   };
 }

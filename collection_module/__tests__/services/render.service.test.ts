@@ -41,7 +41,7 @@ describe('RenderService', () => {
       const result = renderService.renderViewPaymentMethod({
         payment_method: {
           collection_module_key: 'cm_test',
-          module: { id: 'si_123', payment_method: 'pm_123', livemode: false, status: 'active', usage: 'off_session' },
+          module: { id: 'token_test_123', type: 'card', status: 'active' },
         },
         policy: { billing_day: 1 },
       });
@@ -96,7 +96,7 @@ describe('RenderService', () => {
     });
 
     it('should not alter safe strings', () => {
-      expect(renderService.escapeJs('pk_test_abc123')).toBe('pk_test_abc123');
+      expect(renderService.escapeJs('test_provider_key_abc123')).toBe('test_provider_key_abc123');
     });
   });
 });

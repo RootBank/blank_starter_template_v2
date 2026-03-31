@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###############################################################################
-# Stripe Collection Module Deployment Script
+# Collection Module Deployment Script
 #
 # This script automates the deployment process to the Root Platform.
 # It automatically loads configuration from:
@@ -174,7 +174,7 @@ print_usage() {
     cat << EOF
 Usage: $0 [OPTIONS] <environment> [version]
 
-Deployment script for Stripe Collection Module to Root Platform.
+Deployment script for Collection Module to Root Platform.
 
 Configuration:
     By default, this script automatically loads configuration from:

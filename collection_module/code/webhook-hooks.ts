@@ -49,19 +49,23 @@ export const processWebhookRequest = async (request: any) => {
 
     // ── Step 3: Route events ──────────────────────────────────────────────────
     //
-    // TODO: Import your provider event constants and resolve controllers.
+    // The scaffold prints the exact import line for your provider's events file.
+    // The constant is named {YOURPROVIDER}_EVENTS — e.g. GOCARDLESS_EVENTS.
+    // File location: code/interfaces/{provider}-events.ts
     //
-    // import { PROVIDER_EVENTS } from './interfaces/{provider}-events';
+    // Example after scaffolding GoCardless:
+    //
+    // import { GOCARDLESS_EVENTS } from './interfaces/gocardless-events';
     //
     // switch (payload.type) {
-    //   case PROVIDER_EVENTS.PAYMENT_SUCCEEDED: {
-    //     const controller = container.resolve(ServiceToken.PAYMENT_SUCCEEDED_CONTROLLER);
-    //     await controller.handle(payload.data.object);
+    //   case GOCARDLESS_EVENTS.PAYMENT_COMPLETED: {
+    //     const controller = container.resolve(ServiceToken.PAYMENT_COMPLETED_CONTROLLER);
+    //     await controller.handle(payload);
     //     break;
     //   }
-    //   case PROVIDER_EVENTS.PAYMENT_FAILED: {
+    //   case GOCARDLESS_EVENTS.PAYMENT_FAILED: {
     //     const controller = container.resolve(ServiceToken.PAYMENT_FAILED_CONTROLLER);
-    //     await controller.handle(payload.data.object);
+    //     await controller.handle(payload);
     //     break;
     //   }
     //   default:

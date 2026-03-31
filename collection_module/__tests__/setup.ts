@@ -11,14 +11,14 @@ jest.mock('../code/env', () => ({
   NODE_ENV: 'sandbox',
 
   // Payment Provider Configuration
-  PROVIDER_WEBHOOK_SIGNING_SECRET_LIVE: 'whsec_live_test_secret',
-  PROVIDER_WEBHOOK_SIGNING_SECRET_TEST: 'whsec_test_secret',
-  PROVIDER_PRODUCT_ID_LIVE: 'prod_live_test_123',
-  PROVIDER_PRODUCT_ID_TEST: 'prod_test_123',
-  PROVIDER_PUBLISHABLE_KEY_LIVE: 'pk_live_test_key_123',
-  PROVIDER_PUBLISHABLE_KEY_TEST: 'pk_test_key_123',
-  PROVIDER_SECRET_KEY_LIVE: 'sk_live_test_key_123',
-  PROVIDER_SECRET_KEY_TEST: 'sk_test_key_123',
+  PROVIDER_WEBHOOK_SIGNING_SECRET_LIVE: 'test_webhook_secret_live',
+  PROVIDER_WEBHOOK_SIGNING_SECRET_TEST: 'test_webhook_secret_sandbox',
+  PROVIDER_PRODUCT_ID_LIVE: 'test_product_id_live',
+  PROVIDER_PRODUCT_ID_TEST: 'test_product_id_sandbox',
+  PROVIDER_PUBLISHABLE_KEY_LIVE: 'test_publishable_key_live',
+  PROVIDER_PUBLISHABLE_KEY_TEST: 'test_publishable_key_sandbox',
+  PROVIDER_SECRET_KEY_LIVE: 'test_secret_key_live',
+  PROVIDER_SECRET_KEY_TEST: 'test_secret_key_sandbox',
 
   // Root Platform Configuration
   ROOT_COLLECTION_MODULE_KEY: 'test_collection_module',

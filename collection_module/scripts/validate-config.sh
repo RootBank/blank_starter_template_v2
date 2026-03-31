@@ -50,7 +50,7 @@ else
     success ".root-config.json found"
     
     # Validate .root-config.json content
-    if grep -q "my_collection_module_cm_stripe" .root-config.json; then
+    if grep -q "cm_placeholder" .root-config.json; then
         warning ".root-config.json contains template placeholder values"
         echo "   Update collectionModuleKey with your actual module key."
         WARNINGS=$((WARNINGS + 1))
@@ -69,7 +69,7 @@ if [ -f "code/env.ts" ]; then
     
     PLACEHOLDERS=(
         "xxxxx"
-        "my_collection_module_cm_stripe"
+        "cm_placeholder"
     )
     
     for PLACEHOLDER in "${PLACEHOLDERS[@]}"; do

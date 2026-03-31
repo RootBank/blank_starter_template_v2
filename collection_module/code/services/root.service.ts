@@ -7,7 +7,7 @@
 
 import * as root from '@rootplatform/node-sdk';
 import { LogService } from './log.service';
-import RootClient from '../clients/root-client';
+import { RootClient } from '../clients/root-client';
 
 export interface UpdatePaymentStatusParams {
   paymentId: string;
@@ -19,7 +19,7 @@ export interface UpdatePaymentStatusParams {
 export class RootService {
   constructor(
     private readonly logService: LogService,
-    private readonly rootClient: typeof RootClient
+    private readonly rootClient: RootClient
   ) {}
 
   /**

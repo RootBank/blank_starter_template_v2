@@ -143,9 +143,9 @@ describe('ConfigurationService', () => {
       });
 
       expect(config.get('environment')).toBe('production');
-      // Production should use LIVE keys
-      expect(config.get('providerPublishableKey')).toContain('pk_live');
-      expect(config.get('providerSecretKey')).toContain('sk_live');
+      // Production should use the LIVE variants
+      expect(config.get('providerPublishableKey')).toContain('live');
+      expect(config.get('providerSecretKey')).toContain('live');
     });
 
     it('should load sandbox configuration', () => {
@@ -155,9 +155,9 @@ describe('ConfigurationService', () => {
       });
 
       expect(config.get('environment')).toBe('sandbox');
-      // Sandbox should use TEST keys
-      expect(config.get('providerPublishableKey')).toContain('pk_test');
-      expect(config.get('providerSecretKey')).toContain('sk_test');
+      // Sandbox should use the TEST/sandbox variants
+      expect(config.get('providerPublishableKey')).toContain('sandbox');
+      expect(config.get('providerSecretKey')).toContain('sandbox');
     });
 
     it('should have different API keys for production vs sandbox', () => {

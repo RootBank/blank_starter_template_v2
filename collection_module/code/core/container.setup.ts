@@ -13,6 +13,7 @@
 import { Container, ServiceToken, ServiceLifetime } from './container';
 import { LogService } from '../services/log.service';
 import { ConfigurationService } from '../services/config.service';
+import { RootClient } from '../clients/root-client';
 
 /**
  * Create and configure the application container.
@@ -40,11 +41,7 @@ export function createContainer(): Container {
 
   container.register(
     ServiceToken.ROOT_CLIENT,
-    () => {
-      // eslint-disable-next-line unicorn/prefer-module
-      const RootClient = require('../clients/root-client').default;
-      return new RootClient();
-    },
+    () => new RootClient(),
     ServiceLifetime.SINGLETON
   );
 

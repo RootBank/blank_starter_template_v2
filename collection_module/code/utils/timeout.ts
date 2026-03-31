@@ -69,16 +69,17 @@ export async function withTimeoutFallback<T>(
 }
 
 /**
- * Create a timeout error with context
+ * Internal signal error thrown when withTimeoutError fires.
+ * Use TimeoutError from utils/error-types (via utils/index) for public-facing error handling.
  */
-export class TimeoutError extends Error {
+export class OperationTimeoutError extends Error {
   constructor(
     message: string,
     public readonly timeoutMs: number,
     public readonly operation?: string
   ) {
     super(message);
-    this.name = 'TimeoutError';
+    this.name = 'OperationTimeoutError';
   }
 }
 
@@ -111,7 +112,7 @@ export async function withTimeoutError<T>(
     operation,
     new Promise<never>((_, reject) =>
       setTimeout(
-        () => reject(new TimeoutError(errorMessage, timeoutMs, operationName)),
+        () => reject(new OperationTimeoutError(errorMessage, timeoutMs, operationName)),
         timeoutMs
       )
     ),

@@ -11,7 +11,6 @@ module.exports = {
     '!code/**/*.d.ts',
     '!code/env.ts',
     '!code/env.sample.ts',
-    '!code/sample.env.ts',
     '!code/main.ts',
     '!code/utils/index.ts',
     '!code/interfaces/**',
