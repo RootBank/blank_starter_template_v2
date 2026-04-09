@@ -55,7 +55,7 @@ if (args.meta) {
 
 // ─── Write to log ─────────────────────────────────────────────────────────────
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', 'collection_module');
 const LOG_DIR = path.join(ROOT, '.logs');
 const LOG_FILE = path.join(LOG_DIR, 'actions.jsonl');
 

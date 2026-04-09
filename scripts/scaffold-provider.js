@@ -82,7 +82,7 @@ const webhookHeader = args['webhook-header'] || 'X-Webhook-Signature';
 const isDryRun = !!args['dry-run'];
 const reason = args.reason || `Add ${Provider} payment provider`;
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', 'collection_module');
 
 // ─── Log run start ────────────────────────────────────────────────────────────
 

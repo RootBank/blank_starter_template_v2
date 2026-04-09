@@ -36,7 +36,7 @@
     "ts-jest": "^29.4.5"
   },
   "scripts": {
-    "validate": "bash scripts/validate-config.sh",
+    "validate": "bash ../scripts/validate-config.sh",
     "lint": "eslint code --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint --fix code --ext .js,.jsx,.ts,.tsx",
     "prettier-check": "npx prettier --check code/",
@@ -54,14 +54,14 @@
     "precommit": "npm run lint && npm run test",
     "prepush": "npm run lint && npm run test && npm run build",
     "setup": "node ../scripts/setup.js",
-    "scaffold:provider": "node scripts/scaffold-provider.js",
-    "extract:spec": "node scripts/extract-spec.js",
-    "log:action": "node scripts/log-action.js",
+    "scaffold:provider": "node ../scripts/scaffold-provider.js",
+    "extract:spec": "node ../scripts/extract-spec.js",
+    "log:action": "node ../scripts/log-action.js",
     "predeploy": "npm run validate && npm run test && npm run build",
-    "deploy:sandbox": "bash scripts/deploy.sh sandbox",
-    "deploy:production": "bash scripts/deploy.sh production",
-    "deploy:dry-run:sandbox": "bash scripts/deploy.sh --dry-run sandbox",
-    "deploy:dry-run:production": "bash scripts/deploy.sh --dry-run production"
+    "deploy:sandbox": "bash ../scripts/deploy.sh sandbox",
+    "deploy:production": "bash ../scripts/deploy.sh production",
+    "deploy:dry-run:sandbox": "bash ../scripts/deploy.sh --dry-run sandbox",
+    "deploy:dry-run:production": "bash ../scripts/deploy.sh --dry-run production"
   },
   "engines": {
     "npm": ">=8.0.0",

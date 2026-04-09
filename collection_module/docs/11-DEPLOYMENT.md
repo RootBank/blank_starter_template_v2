@@ -33,5 +33,5 @@ Use `npm run test:ci` in CI pipelines — it adds `--coverage` and `--maxWorkers
 
 ## Related
 
-- `scripts/deploy.sh` — Deployment script
-- `scripts/validate-config.sh` — Pre-deploy validation
+- `../scripts/deploy.sh` — Deployment script (in repo root `scripts/`)
+- `../scripts/validate-config.sh` — Pre-deploy validation (in repo root `scripts/`)

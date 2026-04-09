@@ -47,10 +47,10 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 
 const inputSource = args.input;
-const outputPath = args.output || path.resolve(__dirname, '..', 'docs', 'SPEC-EXTRACTED.md');
+const outputPath = args.output || path.resolve(__dirname, '..', 'collection_module', 'docs', 'SPEC-EXTRACTED.md');
 const isDryRun = !!args['dry-run'];
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', 'collection_module');
 const SPEC_TEMPLATE_PATH = path.join(ROOT, 'docs', 'SPEC-TEMPLATE.md');
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

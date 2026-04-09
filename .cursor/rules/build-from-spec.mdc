@@ -1,6 +1,6 @@
 ---
 description: Build a collection module from a provider spec, API doc, PDF, or URL
-globs: ["collection_module/code/**", "collection_module/docs/**", "collection_module/scripts/**"]
+globs: ["collection_module/code/**", "collection_module/docs/**", "scripts/**"]
 alwaysApply: false
 ---
 

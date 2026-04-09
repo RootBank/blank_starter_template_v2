@@ -156,18 +156,18 @@ This runs validation, tests, and build in sequence.
 
 ```json
 {
-  "validate": "bash scripts/validate-config.sh",
+  "validate": "bash ../scripts/validate-config.sh",
   "lint": "eslint code --ext .js,.jsx,.ts,.tsx",
   "format": "npm run prettier-write && npm run lint:fix",
   "build": "rm -rf ./dist && tsc --project tsconfig.build.json",
   "test": "jest --forceExit",
   "test:unit": "jest --forceExit --testPathPattern='__tests__/(services|core|utils)'",
   "test:coverage": "jest --forceExit --coverage",
-  "scaffold:provider": "node scripts/scaffold-provider.js",
-  "extract:spec": "node scripts/extract-spec.js",
-  "log:action": "node scripts/log-action.js",
-  "deploy:sandbox": "bash scripts/deploy.sh sandbox",
-  "deploy:production": "bash scripts/deploy.sh production"
+  "scaffold:provider": "node ../scripts/scaffold-provider.js",
+  "extract:spec": "node ../scripts/extract-spec.js",
+  "log:action": "node ../scripts/log-action.js",
+  "deploy:sandbox": "bash ../scripts/deploy.sh sandbox",
+  "deploy:production": "bash ../scripts/deploy.sh production"
 }
 ```
 
