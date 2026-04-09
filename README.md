@@ -6,7 +6,7 @@ A provider-agnostic template for connecting any payment provider to the [Root Pl
 
 ## What Is a Collection Module?
 
-When a Root Platform insurance product needs to collect premiums, it calls a **Collection Module** — a small hosted service that bridges Root to a payment provider (GoCardless, PayFast, Peach Payments, etc.).
+When a Root Platform insurance product needs to collect premiums, it calls a **Collection Module** — a small hosted service that bridges Root to a payment provider.
 
 This template gives you the full skeleton: DI container, lifecycle hooks, webhook handler, test suite, and CLI tooling. You fill in the provider-specific logic — or better, **you let AI do it**.
 
@@ -18,21 +18,20 @@ This is the primary way to use this template. You bring the provider API docs; t
 
 ### Option A — Claude Code (recommended)
 
-Claude Code has two built-in commands for this template:
+Claude Code has built-in skills for this template:
 
 **`/build-from-spec`** — Full guided workflow from provider docs to working code:
 
 ```
-/build-from-spec
+/build-from-spec <url-or-path-to-api-docs>
 ```
 
 Claude will:
-1. Ask you for the provider API docs (URL, PDF, or paste)
-2. Run `extract:spec` to produce a structured spec in `docs/`
-3. Run `scaffold:provider` to generate all 7 provider files
-4. Implement every TODO stub using the spec and `STRIPE-REFERENCE.md` as patterns
-5. Wire the provider into `container.setup.ts`, `webhook-hooks.ts`, and lifecycle hooks
-6. Run the test suite and fix any failures
+1. Extract the provider API docs into a structured spec in `docs/`
+2. Run `scaffold:provider` to generate all 7 provider files
+3. Implement every TODO stub using the spec and the reference implementation as patterns
+4. Wire the provider into `container.setup.ts`, `webhook-hooks.ts`, and lifecycle hooks
+5. Run the test suite and fix any failures
 
 **`/review-implementation`** — Quality gate after implementing:
 
@@ -42,21 +41,28 @@ Claude will:
 
 Claude audits your implementation against 21 criteria (Critical C1–C8, Major M1–M8, Minor m1–m5) and fixes any issues it finds. Run this before deploying.
 
+**`/open-in-cursor`** — Open the collection module in Cursor:
+
+```
+/open-in-cursor          # opens in Cursor desktop
+/open-in-cursor web      # opens in Cursor web (vscode.dev)
+```
+
 #### Prompting Tips for Claude
 
 You don't need to understand the codebase to get started. These prompts work well:
 
 ```
-"Build a GoCardless Direct Debit collection module using the API docs at
-https://developer.gocardless.com/api-reference. Our Root org ID is abc123."
+"Build a collection module using the API docs at <provider-docs-url>.
+Our Root org ID is abc123."
 
-"I've pasted the PayFast API docs below. Build me a collection module.
+"I've pasted the provider API docs below. Build me a collection module.
 Use the HTTP client pattern, not SDK."
 
-"The spec is already in docs/peach-payments-spec.md. Scaffold and implement
+"The spec is already in docs/myprovider-spec.md. Scaffold and implement
 the full module. Wire all lifecycle hooks."
 
-"Run /review-implementation and fix everything it flags as Critical or Major."
+"/review-implementation — fix everything it flags as Critical or Major."
 ```
 
 ---
@@ -66,19 +72,18 @@ the full module. Wire all lifecycle hooks."
 The `.cursor/rules/build-from-spec.mdc` rule activates automatically when you ask Cursor to add a provider.
 
 ```
-@build-from-spec Add a GoCardless Direct Debit provider. API docs:
-https://developer.gocardless.com/api-reference
+@build-from-spec Add a new provider. API docs: <provider-docs-url>
 ```
 
-Cursor will follow the same 5-step workflow as the Claude command.
+Cursor will follow the same 5-step workflow as the Claude Code skill.
 
 **Useful follow-up prompts in Cursor:**
 
 ```
-"Implement all the TODO stubs in code/services/gocardless.service.ts
-using the GoCardless SDK patterns from code/services/gocardless.service.ts"
+"Implement all the TODO stubs in code/services/{provider}.service.ts
+using the reference patterns from the docs"
 
-"Wire the GOCARDLESS_EVENTS constants into webhook-hooks.ts and add
+"Wire the PROVIDER_EVENTS constants into webhook-hooks.ts and add
 a controller for each event type"
 
 "Write tests for all the methods in the adapter — use factories.ts for test data"
@@ -92,10 +97,10 @@ The `.github/copilot-instructions.md` gives Copilot full project context. Use in
 
 ```
 # In Copilot Chat:
-"Implement createCustomer in GoCardlessService using the GoCardless
-Node.js SDK. Follow the Stripe reference patterns in STRIPE-REFERENCE.md"
+"Implement createCustomer in {Provider}Service following
+the reference patterns in the docs"
 
-"Generate a complete test for GoCardlessToRootAdapter.convertPaymentToRootUpdate.
+"Generate a complete test for {Provider}ToRootAdapter.convertPaymentToRootUpdate.
 Use factories from __tests__/helpers/factories.ts"
 ```
 
@@ -134,8 +139,8 @@ cd collection_module
 
 # From a URL (Claude reads the docs and fills the SPEC-TEMPLATE)
 npm run extract:spec -- \
-  --input=https://developer.gocardless.com/api-reference \
-  --output=docs/gocardless-spec.md
+  --input=<provider-docs-url> \
+  --output=docs/myprovider-spec.md
 
 # From a PDF
 npm run extract:spec -- \
@@ -155,17 +160,17 @@ npm run extract:spec -- \
 ```bash
 # From spec (recommended — reads provider name, auth type, base URL automatically)
 npm run scaffold:provider -- \
-  --from-spec=docs/gocardless-spec.md \
-  --reason="GoCardless Direct Debit for ZA market"
+  --from-spec=docs/myprovider-spec.md \
+  --reason="<why you're adding this provider>"
 
 # Or with explicit flags
 npm run scaffold:provider -- \
-  --provider=GoCardless \
+  --provider=MyProvider \
   --api-type=http \
-  --base-url=https://api.gocardless.com \
+  --base-url=https://api.myprovider.com \
   --auth-header=Authorization \
   --webhook-header=Webhook-Signature \
-  --reason="GoCardless Direct Debit for ZA market"
+  --reason="<why you're adding this provider>"
 
 npm run scaffold:provider -- --help   # see all options
 ```
@@ -174,9 +179,9 @@ The scaffold generates 7 files and **prints the exact TypeScript blocks** to pas
 
 ### 4. Implement the stubs
 
-At this point, open Claude Code and run:
+At this point, open Claude Code and run the skill:
 ```
-/build-from-spec
+/build-from-spec docs/myprovider-spec.md
 ```
 
 Or manually implement:
@@ -189,10 +194,11 @@ Or manually implement:
 | `code/webhook-hooks.ts` | Signature verification + event routing |
 | `code/lifecycle-hooks/*.ts` | `afterPolicyIssued()`, `afterPaymentCreated()`, etc. |
 
-Reference patterns for every file: `collection_module/docs/STRIPE-REFERENCE.md`
+Reference patterns for every file: `collection_module/docs/REFERENCE.md`
 
 ### 5. Run the quality review
 
+Run the review skill:
 ```
 /review-implementation
 ```
@@ -217,7 +223,7 @@ Running `scaffold:provider` creates:
 | `code/clients/{provider}-client.ts` | Wraps the provider SDK or REST API; implements `verifyWebhookSignature()` |
 | `code/services/{provider}.service.ts` | Business logic: `createCustomer`, `createPaymentIntent`, `cancelSubscription` |
 | `code/adapters/{provider}-to-root-adapter.ts` | Pure data transforms: provider shapes → Root Platform shapes |
-| `code/interfaces/{provider}-events.ts` | Webhook event type constants (e.g. `GOCARDLESS_EVENTS.PAYMENT_COMPLETED`) |
+| `code/interfaces/{provider}-events.ts` | Webhook event type constants (e.g. `PROVIDER_EVENTS.PAYMENT_COMPLETED`) |
 | `__tests__/clients/{provider}-client.test.ts` | Client unit tests |
 | `__tests__/services/{provider}.service.test.ts` | Service unit tests |
 | `__tests__/adapters/{provider}-to-root-adapter.test.ts` | Adapter unit tests |
@@ -327,7 +333,7 @@ Full pattern docs and implementation guides live in `collection_module/docs/`:
 | `13-ERROR-HANDLING.md` | ModuleError, retryWithBackoff, timeout patterns |
 | `14-BUILD-FROM-SPEC.md` | **Master SOP** — end-to-end build workflow |
 | `15-SELF-REVIEW.md` | Quality checklist — Critical / Major / Minor criteria |
-| `STRIPE-REFERENCE.md` | **Complete working reference** — every pattern implemented for Stripe |
+| `REFERENCE.md` | **Complete working reference** — every pattern implemented |
 | `SPEC-TEMPLATE.md` | Blank spec template (filled by `extract:spec`) |
 
 ---
@@ -336,6 +342,6 @@ Full pattern docs and implementation guides live in `collection_module/docs/`:
 
 - **Node.js** >= 18, **npm** >= 8
 - **Root Platform account** — [rootplatform.com](https://rootplatform.com)
-- **Payment provider account** — GoCardless, PayFast, Peach Payments, or any other
+- **Payment provider account** — any provider with an API
 - **`ANTHROPIC_API_KEY`** — only required for `npm run extract:spec` (AI spec extraction)
 - **`root-platform-cli`** — only required for deployment: `npm install -g root-platform-cli`
