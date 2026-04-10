@@ -84,17 +84,39 @@ export function renderViewPaymentMethod(): string {
 /**
  * Called after a payment method is assigned to a policy.
  *
- * TODO: Attach the payment method to the provider customer record if required.
+ * Stores the Adyen storedPaymentMethodId from the Root payment method module
+ * into the policy app_data for use in recurring payments.
  */
-export function afterPolicyPaymentMethodAssigned({ policy }: { policy: any }): void {
+export async function afterPolicyPaymentMethodAssigned({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
+  const providerService = container.resolve(ServiceToken.PROVIDER_SERVICE);
+  const rootClient = container.resolve<any>(ServiceToken.ROOT_CLIENT);
 
   logService.info('Payment method assigned to policy', 'afterPolicyPaymentMethodAssigned', {
     policyId: policy.policy_id,
   });
 
-  // Stub — implement your logic here
+  const paymentMethod = await rootClient.getPolicyPaymentMethod({ policyId: policy.policy_id });
+  const storedPaymentMethodId = paymentMethod?.module?.id;
+  const shopperReference = policy.app_data?.adyen_shopper_reference;
+
+  if (storedPaymentMethodId && shopperReference) {
+    await (providerService as any).attachPaymentMethod({
+      paymentMethodId: storedPaymentMethodId,
+      customerId: shopperReference,
+    });
+
+    await rootClient.updatePolicy({
+      policyId: policy.policy_id,
+      body: {
+        app_data: {
+          ...policy.app_data,
+          adyen_stored_payment_method_id: storedPaymentMethodId,
+        },
+      },
+    });
+  }
 }
 
 /**

@@ -79,61 +79,71 @@ export const createMockRootPayment = (overrides?: Partial<{
   ...overrides,
 });
 
-// ── Generic provider factories ────────────────────────────────────────────────
-// TODO: Replace these with your provider's actual API response shapes.
-// Field names should match exactly what the provider API returns.
+// ── Adyen provider factories ─────────────────────────────────────────────────
 
 export const createMockProviderCustomer = (overrides?: Record<string, any>) => ({
-  id: 'cust_test_123',
+  id: 'root_policy_test_123',
   email: 'test@example.com',
   name: 'Test Customer',
-  metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
+  metadata: { root_policy_id: 'policy_test_123' },
   ...overrides,
 });
 
 export const createMockProviderPaymentMethod = (overrides?: Record<string, any>) => ({
-  id: 'pm_test_123',
-  type: 'card',
-  status: 'active',
-  metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
+  id: 'stored_pm_test_123',
+  type: 'scheme',
   ...overrides,
 });
 
 export const createMockProviderPayment = (overrides?: Record<string, any>) => ({
-  id: 'pay_test_123',
-  amount: 10000,
-  currency: 'ZAR',
-  status: 'pending',
-  description: 'Monthly premium',
-  metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
+  pspReference: 'PSP_test_123',
+  resultCode: 'Authorised',
+  amount: { currency: 'ZAR', value: 50000 },
+  merchantReference: 'payment_test_123',
   ...overrides,
 });
 
-// ── Webhook event factories ───────────────────────────────────────────────────
-// TODO: Replace event shapes with your provider's actual webhook payload format.
-// These are used with createMockWebhookRequest() from test-helpers.ts.
+// ── Adyen webhook event factories ────────────────────────────────────────────
 
 /**
- * Generic webhook event factory.
- * Replace `type` and `data` with your provider's actual event structure.
+ * Create a mock Adyen webhook notification payload.
  *
- * Example (GoCardless):
- *   createMockWebhookEvent('payment.paid_out', { links: { payment: 'pay_123' } })
- *
- * Example (Stripe):
- *   createMockWebhookEvent('invoice.paid', { data: { object: { id: 'in_123' } } })
+ * @param eventCode - Adyen event code (e.g. 'AUTHORISATION', 'CANCELLATION')
+ * @param success   - Whether the event was successful ('true'/'false')
+ * @param overrides - Override fields on the NotificationRequestItem
+ */
+export const createMockAdyenNotification = (
+  eventCode: string,
+  success: string = 'true',
+  overrides?: Record<string, any>,
+) => ({
+  live: 'false',
+  notificationItems: [
+    {
+      NotificationRequestItem: {
+        eventCode,
+        success,
+        pspReference: `PSP_test_${Date.now()}`,
+        originalReference: '',
+        merchantAccountCode: 'TestMerchant',
+        merchantReference: 'payment_test_123',
+        amount: { currency: 'ZAR', value: 50000 },
+        eventDate: new Date().toISOString(),
+        operations: ['CANCEL', 'CAPTURE', 'REFUND'],
+        paymentMethod: 'visa',
+        reason: '',
+        additionalData: { hmacSignature: 'test_signature' },
+        ...overrides,
+      },
+    },
+  ],
+});
+
+/**
+ * Backwards-compatible generic webhook event factory.
  */
 export const createMockWebhookEvent = (
   type: string,
   data: Record<string, any> = {},
   overrides?: Record<string, any>
-) => ({
-  id: `evt_test_${Date.now()}`,
-  type,
-  created: Math.floor(Date.now() / 1000),
-  data,
-  ...overrides,
-});
+) => createMockAdyenNotification(type, 'true', { ...data, ...overrides });

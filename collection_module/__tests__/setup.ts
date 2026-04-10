@@ -19,6 +19,8 @@ jest.mock('../code/env', () => ({
   PROVIDER_PUBLISHABLE_KEY_TEST: 'test_publishable_key_sandbox',
   PROVIDER_SECRET_KEY_LIVE: 'test_secret_key_live',
   PROVIDER_SECRET_KEY_TEST: 'test_secret_key_sandbox',
+  PROVIDER_MERCHANT_ACCOUNT_LIVE: 'TestMerchantLive',
+  PROVIDER_MERCHANT_ACCOUNT_TEST: 'TestMerchantSandbox',
 
   // Root Platform Configuration
   ROOT_COLLECTION_MODULE_KEY: 'test_collection_module',

@@ -21,6 +21,7 @@ export interface EnvironmentConfig {
   providerPublishableKey: string;
   providerSecretKey: string;
   providerProductId: string;
+  providerMerchantAccount: string;
 }
 
 export interface ConfigMap {
@@ -85,6 +86,7 @@ export class ConfigurationService {
       providerPublishableKey: env.PROVIDER_PUBLISHABLE_KEY_LIVE,
       providerSecretKey: env.PROVIDER_SECRET_KEY_LIVE,
       providerProductId: env.PROVIDER_PRODUCT_ID_LIVE,
+      providerMerchantAccount: env.PROVIDER_MERCHANT_ACCOUNT_LIVE,
       rootApiKey: env.ROOT_API_KEY_LIVE,
       rootBaseUrl: env.ROOT_BASE_URL_LIVE,
     };
@@ -96,6 +98,7 @@ export class ConfigurationService {
       providerPublishableKey: env.PROVIDER_PUBLISHABLE_KEY_TEST,
       providerSecretKey: env.PROVIDER_SECRET_KEY_TEST,
       providerProductId: env.PROVIDER_PRODUCT_ID_TEST,
+      providerMerchantAccount: env.PROVIDER_MERCHANT_ACCOUNT_TEST,
       rootApiKey: env.ROOT_API_KEY_SANDBOX,
       rootBaseUrl: env.ROOT_BASE_URL_SANDBOX,
     };
