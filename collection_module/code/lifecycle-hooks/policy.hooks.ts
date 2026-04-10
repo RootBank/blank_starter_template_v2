@@ -7,19 +7,37 @@
 import { getContainer } from '../core/container.setup';
 import { ServiceToken } from '../core/container';
 import { LogService } from '../services/log.service';
+import { AdyenService } from '../services/adyen.service';
+import { AdyenToRootAdapter } from '../adapters/adyen-to-root-adapter';
 
 /**
- * Called after a policy is issued
+ * Called after a policy is issued.
  *
- * TODO: Implement policy issued logic
+ * Creates an Adyen shopper reference and stores it in policy app_data.
  */
-export function afterPolicyIssued(): void {
+export async function afterPolicyIssued({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
+  const providerService = container.resolve<AdyenService>(ServiceToken.PROVIDER_SERVICE);
+  const rootClient = container.resolve<any>(ServiceToken.ROOT_CLIENT);
+  const adapter = new AdyenToRootAdapter();
 
-  logService.info('Policy issued', 'afterPolicyIssued');
+  logService.info('Policy issued', 'afterPolicyIssued', {
+    policyId: policy.policy_id,
+  });
 
-  // Stub - implement your logic here
+  const customer = await providerService.createCustomer({
+    email: policy.policyholder?.email ?? '',
+    name: policy.policyholder
+      ? `${policy.policyholder.first_name} ${policy.policyholder.last_name}`
+      : undefined,
+    metadata: { root_policy_id: policy.policy_id },
+  });
+
+  await rootClient.updatePolicy({
+    policyId: policy.policy_id,
+    body: { app_data: adapter.convertCustomerToAppData(customer) },
+  });
 }
 
 /**
@@ -46,11 +64,11 @@ export function afterPolicyUpdated({
 }
 
 /**
- * Called after a policy is cancelled
+ * Called after a policy is cancelled.
  *
- * TODO: Implement policy cancellation logic
+ * Disables the Adyen stored payment method token to stop future charges.
  */
-export function afterPolicyCancelled({ policy }: { policy: any }): void {
+export async function afterPolicyCancelled({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
@@ -58,7 +76,11 @@ export function afterPolicyCancelled({ policy }: { policy: any }): void {
     policyId: policy.policy_id,
   });
 
-  // Stub - implement your logic here
+  const storedPaymentMethodId = policy.app_data?.adyen_stored_payment_method_id;
+  if (storedPaymentMethodId) {
+    const providerService = container.resolve<AdyenService>(ServiceToken.PROVIDER_SERVICE);
+    await providerService.cancelSubscription(storedPaymentMethodId);
+  }
 }
 
 /**

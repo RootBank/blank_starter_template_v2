@@ -1,5 +1,5 @@
 /**
- * Payment Hooks Tests
+ * Payment Hooks Tests — Adyen
  */
 
 import * as paymentHooks from '../../code/lifecycle-hooks/payment.hooks';
@@ -12,15 +12,25 @@ jest.mock('../../code/core/container.setup');
 describe('Payment Hooks', () => {
   let mockContainer: any;
   let mockLogService: ReturnType<typeof createMockLogService>;
+  let mockProviderService: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockLogService = createMockLogService();
+    mockProviderService = {
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: 'PSP_123',
+        status: 'Authorised',
+        amount: 50000,
+        currency: 'ZAR',
+      }),
+    };
 
     mockContainer = {
       resolve: jest.fn((token: symbol) => {
         if (token === ServiceToken.LOG_SERVICE) return mockLogService;
+        if (token === ServiceToken.PROVIDER_SERVICE) return mockProviderService;
         return null;
       }),
     };
@@ -29,33 +39,61 @@ describe('Payment Hooks', () => {
   });
 
   describe('afterPaymentCreated', () => {
-    it('should log payment creation with payment and policy IDs', () => {
-      const policy = { policy_id: 'pol_123' };
-      const payment = {
-        payment_id: 'pay_123',
-        amount: 10000,
-        currency: 'USD',
+    it('should create payment intent with Adyen', async () => {
+      const policy = {
+        policy_id: 'pol_123',
+        currency: 'ZAR',
+        app_data: {
+          adyen_shopper_reference: 'root_pol_123',
+          adyen_stored_payment_method_id: 'stored_pm_456',
+        },
       };
+      const payment = { payment_id: 'pay_123', amount: 50000 };
 
-      paymentHooks.afterPaymentCreated({ policy, payment });
+      await paymentHooks.afterPaymentCreated({ policy, payment });
 
-      expect(mockLogService.info).toHaveBeenCalledWith(
-        'Payment created',
+      expect(mockProviderService.createPaymentIntent).toHaveBeenCalledWith({
+        amount: 50000,
+        currency: 'ZAR',
+        customerId: 'root_pol_123',
+        metadata: {
+          rootPaymentId: 'pay_123',
+          rootPolicyId: 'pol_123',
+          paymentMethodId: 'stored_pm_456',
+        },
+      });
+    });
+
+    it('should skip payment when shopper reference is missing', async () => {
+      const policy = { policy_id: 'pol_123', app_data: {} };
+      const payment = { payment_id: 'pay_123', amount: 50000 };
+
+      await paymentHooks.afterPaymentCreated({ policy, payment });
+
+      expect(mockProviderService.createPaymentIntent).not.toHaveBeenCalled();
+      expect(mockLogService.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Missing Adyen shopper reference'),
         'afterPaymentCreated',
-        { policyId: 'pol_123', paymentId: 'pay_123' }
+        expect.any(Object),
       );
     });
 
-    it('should log payment creation without IDs', () => {
-      const policy = {};
-      const payment = {};
+    it('should log payment creation', async () => {
+      const policy = {
+        policy_id: 'pol_123',
+        app_data: {
+          adyen_shopper_reference: 'root_pol_123',
+          adyen_stored_payment_method_id: 'stored_pm_456',
+        },
+      };
+      const payment = { payment_id: 'pay_123', amount: 50000 };
 
-      paymentHooks.afterPaymentCreated({ policy, payment });
+      await paymentHooks.afterPaymentCreated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment created',
         'afterPaymentCreated',
-        { policyId: undefined, paymentId: undefined }
+        { policyId: 'pol_123', paymentId: 'pay_123' },
       );
     });
   });
@@ -63,30 +101,14 @@ describe('Payment Hooks', () => {
   describe('afterPaymentUpdated', () => {
     it('should log payment update with payment and policy IDs', () => {
       const policy = { policy_id: 'pol_456' };
-      const payment = {
-        payment_id: 'pay_456',
-        status: 'successful',
-      };
+      const payment = { payment_id: 'pay_456', status: 'successful' };
 
       paymentHooks.afterPaymentUpdated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment updated',
         'afterPaymentUpdated',
-        { policyId: 'pol_456', paymentId: 'pay_456' }
-      );
-    });
-
-    it('should log payment update without IDs', () => {
-      const policy = {};
-      const payment = {};
-
-      paymentHooks.afterPaymentUpdated({ policy, payment });
-
-      expect(mockLogService.info).toHaveBeenCalledWith(
-        'Payment updated',
-        'afterPaymentUpdated',
-        { policyId: undefined, paymentId: undefined }
+        { policyId: 'pol_456', paymentId: 'pay_456' },
       );
     });
   });

@@ -11,6 +11,10 @@
 import { getContainer } from './core/container.setup';
 import { ServiceToken } from './core/container';
 import { LogService } from './services/log.service';
+import { ConfigurationService } from './services/config.service';
+import { ADYEN_EVENTS, AdyenWebhookPayload } from './interfaces/adyen-events';
+import AdyenClient from './clients/adyen-client';
+import { AdyenToRootAdapter, PaymentStatus } from './adapters/adyen-to-root-adapter';
 
 export const processWebhookRequest = async (request: any) => {
   const container = getContainer();
@@ -18,65 +22,123 @@ export const processWebhookRequest = async (request: any) => {
 
   try {
     // ── Step 1: Verify webhook signature ──────────────────────────────────────
-    //
-    // TODO: Uncomment and fill in after scaffolding your provider.
-    //
-    // import { getConfigService } from './services/config-instance';
-    // const providerClient = container.resolve(ServiceToken.PROVIDER_CLIENT);
-    // const config = getConfigService();
-    // const isValid = providerClient.verifyWebhookSignature(
-    //   { body: request.request.body, headers: request.request.headers },
-    //   config.get('providerWebhookSigningSecret'),
-    // );
-    // if (!isValid) {
-    //   logService.warn('Webhook signature verification failed', 'WebhookHandler');
-    //   return {
-    //     response: {
-    //       status: 403,
-    //       headers: { 'Content-Type': 'application/json' },
-    //       body: JSON.stringify({ error: 'Invalid signature' }),
-    //     },
-    //   };
-    // }
+
+    const providerClient = container.resolve<AdyenClient>(ServiceToken.PROVIDER_CLIENT);
+    const config = container.resolve<ConfigurationService>(ServiceToken.CONFIG_SERVICE);
+    const isValid = providerClient.verifyWebhookSignature(
+      { body: request.request.body, headers: request.request.headers },
+      config.get('providerWebhookSigningSecret'),
+    );
+    if (!isValid) {
+      logService.warn('Webhook signature verification failed', 'WebhookHandler');
+      return {
+        response: {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Invalid signature' }),
+        },
+      };
+    }
 
     // ── Step 2: Parse event ───────────────────────────────────────────────────
 
-    const payload = JSON.parse(request.request.body as string);
+    const body =
+      typeof request.request.body === 'string'
+        ? request.request.body
+        : request.request.body.toString('utf-8');
+    const payload: AdyenWebhookPayload = JSON.parse(body);
+    const items = payload.notificationItems ?? [];
 
-    logService.info('Received webhook', 'WebhookHandler', {
-      type: payload.type,
-    });
+    // Process each notification item (Adyen may batch multiple items)
+    for (const item of items) {
+      const notification = item.NotificationRequestItem;
 
-    // ── Step 3: Route events ──────────────────────────────────────────────────
-    //
-    // The scaffold prints the exact import line for your provider's events file.
-    // The constant is named {YOURPROVIDER}_EVENTS — e.g. GOCARDLESS_EVENTS.
-    // File location: code/interfaces/{provider}-events.ts
-    //
-    // Example after scaffolding GoCardless:
-    //
-    // import { GOCARDLESS_EVENTS } from './interfaces/gocardless-events';
-    //
-    // switch (payload.type) {
-    //   case GOCARDLESS_EVENTS.PAYMENT_COMPLETED: {
-    //     const controller = container.resolve(ServiceToken.PAYMENT_COMPLETED_CONTROLLER);
-    //     await controller.handle(payload);
-    //     break;
-    //   }
-    //   case GOCARDLESS_EVENTS.PAYMENT_FAILED: {
-    //     const controller = container.resolve(ServiceToken.PAYMENT_FAILED_CONTROLLER);
-    //     await controller.handle(payload);
-    //     break;
-    //   }
-    //   default:
-    //     logService.info(`Unhandled event: ${payload.type}`, 'WebhookHandler');
-    // }
+      logService.info('Received webhook', 'WebhookHandler', {
+        eventCode: notification.eventCode,
+        success: notification.success,
+        pspReference: notification.pspReference,
+      });
 
+      // ── Step 3: Route events ────────────────────────────────────────────────
+
+      const adapter = new AdyenToRootAdapter();
+      const rootService = container.resolve<any>(ServiceToken.ROOT_SERVICE);
+      const isSuccess = notification.success === 'true';
+
+      switch (notification.eventCode) {
+        case ADYEN_EVENTS.AUTHORISATION: {
+          const status = isSuccess
+            ? PaymentStatus.Successful
+            : PaymentStatus.Failed;
+          const update = adapter.convertPaymentToRootUpdate(notification, {
+            status,
+            failureReason: isSuccess ? undefined : notification.reason,
+          });
+          await rootService.updatePaymentStatus(
+            notification.merchantReference,
+            update,
+          );
+          break;
+        }
+
+        case ADYEN_EVENTS.CANCELLATION: {
+          const update = adapter.convertPaymentToRootUpdate(notification, {
+            status: PaymentStatus.Cancelled,
+          });
+          await rootService.updatePaymentStatus(
+            notification.merchantReference,
+            update,
+          );
+          break;
+        }
+
+        case ADYEN_EVENTS.REFUND: {
+          if (isSuccess) {
+            const update = adapter.convertPaymentToRootUpdate(notification, {
+              status: PaymentStatus.Cancelled,
+            });
+            await rootService.updatePaymentStatus(
+              notification.merchantReference,
+              update,
+            );
+          }
+          break;
+        }
+
+        case ADYEN_EVENTS.REFUND_FAILED: {
+          logService.warn('Refund failed', 'WebhookHandler', {
+            pspReference: notification.pspReference,
+            reason: notification.reason,
+          });
+          break;
+        }
+
+        case ADYEN_EVENTS.CHARGEBACK: {
+          const update = adapter.convertPaymentToRootUpdate(notification, {
+            status: PaymentStatus.Failed,
+            failureReason: 'Chargeback received',
+          });
+          await rootService.updatePaymentStatus(
+            notification.merchantReference,
+            update,
+          );
+          break;
+        }
+
+        default:
+          logService.info(
+            `Unhandled event: ${notification.eventCode}`,
+            'WebhookHandler',
+          );
+      }
+    }
+
+    // Adyen requires "[accepted]" in the response body
     return {
       response: {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ received: true }),
+        body: '[accepted]',
       },
     };
   } catch (error: any) {

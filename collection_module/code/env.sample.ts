@@ -40,6 +40,10 @@ export const PROVIDER_PUBLISHABLE_KEY_TEST = '';
 export const PROVIDER_SECRET_KEY_LIVE = 'PROVIDER_SECRET_KEY_LIVE';
 export const PROVIDER_SECRET_KEY_TEST = 'PROVIDER_SECRET_KEY_TEST';
 
+// Merchant Account — required by Adyen on every API call
+export const PROVIDER_MERCHANT_ACCOUNT_LIVE = 'YourCompanyECOM';
+export const PROVIDER_MERCHANT_ACCOUNT_TEST = 'YourCompanyTEST';
+
 // ============================================================================
 // ROOT PLATFORM CONFIGURATION
 // ============================================================================

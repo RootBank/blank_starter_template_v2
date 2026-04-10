@@ -40,6 +40,7 @@ export function createMockConfigService() {
         providerPublishableKey: 'PROVIDER_PUBLISHABLE_KEY_TEST',
         providerWebhookSigningSecret: 'PROVIDER_WEBHOOK_SECRET_TEST',
         providerProductId: 'PROVIDER_PRODUCT_ID_TEST',
+        providerMerchantAccount: 'TestMerchantAccount',
         rootApiKey: 'test_root_key',
         rootBaseUrl: 'https://sandbox.rootplatform.com/v1/insurance',
         rootCollectionModuleKey: 'cm_test',
