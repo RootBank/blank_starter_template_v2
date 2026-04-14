@@ -1,6 +1,7 @@
 {
   "include": [
-    "./code/**/*"
+    "./code/**/*",
+    "./__tests__/**/*"
   ],
   "compilerOptions": {
     "lib": [

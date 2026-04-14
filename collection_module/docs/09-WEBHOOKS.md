@@ -30,6 +30,34 @@ if (!isValid) return { response: { status: 403, ... } };
 - Use `crypto.timingSafeEqual` for HMAC comparisons.
 - Store signing secrets in `providerWebhookSigningSecret` (live) and the test equivalent.
 
+## WebhookParser pattern
+
+Different providers use different webhook payload structures:
+
+| Provider | Structure |
+|---|---|
+| Stripe | Flat: `{ type, data: { object } }` |
+| Adyen | Batched: `{ notificationItems: [{ NotificationRequestItem: { eventCode, ... } }] }` |
+| GoCardless | Wrapped: `{ events: [{ resource_type, action, links }] }` |
+| PayFast | Flat form-encoded: `payment_id=123&status=COMPLETE` |
+
+To handle this variation, implement the `WebhookParser` interface (defined in `provider.interfaces.ts`):
+
+```typescript
+const parser = container.resolve<WebhookParser>(ServiceToken.WEBHOOK_PARSER);
+const events: ParsedWebhookEvent[] = parser.verifyAndParse(headers, body, secret);
+
+for (const event of events) {
+  switch (event.eventType) {
+    case PROVIDER_EVENTS.PAYMENT_COMPLETED:
+      // handle...
+      break;
+  }
+}
+```
+
+This keeps `webhook-hooks.ts` as a thin router and moves provider-specific parsing into the provider client/parser where it belongs.
+
 ## Related
 
 - `code/webhook-hooks.ts` — Stub

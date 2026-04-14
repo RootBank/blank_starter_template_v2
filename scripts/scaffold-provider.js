@@ -126,6 +126,11 @@ const files = [
     reason: `Unit tests for ${Provider}ToRootAdapter`,
     content: adapterTestTemplate(),
   },
+  {
+    path: `__tests__/helpers/${provider}-factories.ts`,
+    reason: `Provider-specific mock factories for ${Provider} API response shapes`,
+    content: providerFactoryTemplate(),
+  },
 ];
 
 // ─── Write files ──────────────────────────────────────────────────────────────
@@ -211,9 +216,18 @@ console.log('  code/lifecycle-hooks/policy.hooks.ts  → afterPolicyIssued, afte
 console.log('  code/lifecycle-hooks/payment.hooks.ts → afterPaymentCreated, afterPaymentUpdated');
 console.log('  code/lifecycle-hooks/payment-method.hooks.ts → renderCreatePaymentMethod');
 console.log('');
-console.log('  STEP 5 — Add env config placeholders to code/env.sample.ts');
-console.log(`  export const PROVIDER_SECRET_KEY_TEST = '${Provider.toUpperCase()}_SECRET_KEY_TEST';`);
-console.log(`  export const PROVIDER_WEBHOOK_SIGNING_SECRET_TEST = '${Provider.toUpperCase()}_WEBHOOK_SECRET_TEST';`);
+console.log('  ⚠ IMPORTANT: Also update these test files (marked STUB-TEST):');
+console.log('    __tests__/lifecycle-hooks/policy.hooks.test.ts');
+console.log('    __tests__/lifecycle-hooks/payment.hooks.test.ts');
+console.log('    __tests__/lifecycle-hooks/payment-method.hooks.test.ts');
+console.log('    __tests__/webhook-hooks.test.ts');
+console.log('  Replace the STUB-TEST markers with provider-specific test logic.');
+console.log('');
+console.log('  STEP 5 — Add env config (4 files to check)');
+console.log('    code/env.sample.ts               — add env var placeholders');
+console.log('    code/services/config.service.ts   — add to EnvironmentConfig or use providerExtraConfig');
+console.log('    __tests__/setup.ts                — add mock values for new env exports');
+console.log('    __tests__/test-helpers.ts          — add to createMockConfigService config map');
 console.log('');
 console.log('  STEP 6 — Run tests');
 console.log('  npm test');
@@ -292,7 +306,7 @@ export default class ${Provider}Client implements PaymentProviderClient {
 
 function serviceTemplate() {
   return `import { LogService } from './log.service';
-import ${Provider}Client from '../clients/${provider}-client';
+import { PaymentProviderClient } from '../interfaces/provider.interfaces';
 import {
   PaymentProviderService,
   ProviderCustomer,
@@ -313,7 +327,7 @@ import { retryWithBackoff, ModuleError } from '../utils';
 export class ${Provider}Service implements PaymentProviderService {
   constructor(
     private readonly logService: LogService,
-    private readonly providerClient: ${Provider}Client,
+    private readonly providerClient: PaymentProviderClient,
   ) {}
 
   async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {
@@ -540,6 +554,57 @@ describe('${Provider}ToRootAdapter', () => {
 `;
 }
 
+function providerFactoryTemplate() {
+  return `/**
+ * ${Provider}-specific test factories
+ *
+ * These factories return shapes matching the actual ${Provider} API responses.
+ * Use these in tests that verify provider-specific data transformation.
+ *
+ * For provider-agnostic shapes (ProviderCustomer, ProviderPaymentMethod, etc.),
+ * use the factories in __tests__/helpers/factories.ts instead.
+ */
+
+/**
+ * Create a mock ${Provider} API customer response.
+ * TODO: Replace with actual ${Provider} customer response shape from API docs.
+ */
+export const createMock${Provider}Customer = (overrides?: Record<string, any>) => ({
+  // TODO: match ${Provider}'s actual customer response shape
+  id: '${provider}_cust_123',
+  email: 'test@example.com',
+  ...overrides,
+});
+
+/**
+ * Create a mock ${Provider} API payment response.
+ * TODO: Replace with actual ${Provider} payment response shape from API docs.
+ */
+export const createMock${Provider}Payment = (overrides?: Record<string, any>) => ({
+  // TODO: match ${Provider}'s actual payment response shape
+  id: '${provider}_pay_123',
+  status: 'pending',
+  amount: 10000,
+  currency: 'ZAR',
+  ...overrides,
+});
+
+/**
+ * Create a mock ${Provider} webhook event payload.
+ * TODO: Replace with actual ${Provider} webhook payload shape from API docs.
+ */
+export const createMock${Provider}WebhookEvent = (
+  eventType: string,
+  overrides?: Record<string, any>,
+) => ({
+  // TODO: match ${Provider}'s actual webhook payload structure
+  type: eventType,
+  data: {},
+  ...overrides,
+});
+`;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function log(level, message, meta = {}) {
@@ -694,6 +759,7 @@ Files created:
   __tests__/clients/{provider}-client.test.ts
   __tests__/services/{provider}.service.test.ts
   __tests__/adapters/{provider}-to-root-adapter.test.ts
+  __tests__/helpers/{provider}-factories.ts
 
 Files you wire manually (or ask Claude):
   code/core/container.setup.ts    — register PROVIDER_CLIENT + PROVIDER_SERVICE

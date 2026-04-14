@@ -40,6 +40,23 @@ export const processWebhookRequest = async (request: any) => {
     // }
 
     // ── Step 2: Parse event ───────────────────────────────────────────────────
+    //
+    // Option A (recommended): Use WebhookParser for provider-agnostic parsing.
+    // After scaffolding, register a WebhookParser and use:
+    //
+    // import { WebhookParser, ParsedWebhookEvent } from './interfaces/provider.interfaces';
+    // const parser = container.resolve<WebhookParser>(ServiceToken.WEBHOOK_PARSER);
+    // const config = getConfigService();
+    // const events = parser.verifyAndParse(
+    //   request.request.headers,
+    //   request.request.body,
+    //   config.get('providerWebhookSigningSecret'),
+    // );
+    // for (const event of events) {
+    //   switch (event.eventType) { /* route each event */ }
+    // }
+    //
+    // Option B (simple): Parse directly (assumes Stripe-style flat structure).
 
     const payload = JSON.parse(request.request.body as string);
 

@@ -1,5 +1,9 @@
 /**
  * Payment Hooks Tests
+ *
+ * STUB-TEST: These tests validate the stub/logging behaviour of the template hooks.
+ * When you implement provider-specific logic, replace the test bodies with
+ * provider-specific assertions.
  */
 
 import * as paymentHooks from '../../code/lifecycle-hooks/payment.hooks';
@@ -21,6 +25,9 @@ describe('Payment Hooks', () => {
     mockContainer = {
       resolve: jest.fn((token: symbol) => {
         if (token === ServiceToken.LOG_SERVICE) return mockLogService;
+        // STUB-TEST: When implementing, add your provider mocks here:
+        // if (token === ServiceToken.PROVIDER_SERVICE) return mockProviderService;
+        // if (token === ServiceToken.ROOT_CLIENT) return mockRootClient;
         return null;
       }),
     };
@@ -29,7 +36,8 @@ describe('Payment Hooks', () => {
   });
 
   describe('afterPaymentCreated', () => {
-    it('should log payment creation with payment and policy IDs', () => {
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log payment creation with payment and policy IDs', async () => {
       const policy = { policy_id: 'pol_123' };
       const payment = {
         payment_id: 'pay_123',
@@ -37,7 +45,7 @@ describe('Payment Hooks', () => {
         currency: 'USD',
       };
 
-      paymentHooks.afterPaymentCreated({ policy, payment });
+      await paymentHooks.afterPaymentCreated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment created',
@@ -46,11 +54,11 @@ describe('Payment Hooks', () => {
       );
     });
 
-    it('should log payment creation without IDs', () => {
+    it('should log payment creation without IDs', async () => {
       const policy = {};
       const payment = {};
 
-      paymentHooks.afterPaymentCreated({ policy, payment });
+      await paymentHooks.afterPaymentCreated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment created',
@@ -61,14 +69,15 @@ describe('Payment Hooks', () => {
   });
 
   describe('afterPaymentUpdated', () => {
-    it('should log payment update with payment and policy IDs', () => {
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log payment update with payment and policy IDs', async () => {
       const policy = { policy_id: 'pol_456' };
       const payment = {
         payment_id: 'pay_456',
         status: 'successful',
       };
 
-      paymentHooks.afterPaymentUpdated({ policy, payment });
+      await paymentHooks.afterPaymentUpdated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment updated',
@@ -77,11 +86,11 @@ describe('Payment Hooks', () => {
       );
     });
 
-    it('should log payment update without IDs', () => {
+    it('should log payment update without IDs', async () => {
       const policy = {};
       const payment = {};
 
-      paymentHooks.afterPaymentUpdated({ policy, payment });
+      await paymentHooks.afterPaymentUpdated({ policy, payment });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment updated',

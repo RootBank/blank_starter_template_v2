@@ -12,14 +12,39 @@ import { LogService } from '../services/log.service';
  * Called after a policy is issued
  *
  * TODO: Implement policy issued logic
+ * - Resolve the provider service via DI: container.resolve(ServiceToken.PROVIDER_SERVICE)
+ * - Create a customer in the provider
+ * - Update policy.app_data with provider customer ID
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
+ * Type as PaymentProviderService from provider.interfaces.ts.
  */
-export function afterPolicyIssued(): void {
+export async function afterPolicyIssued({
+  policy,
+}: {
+  policy: any;
+}): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
-  logService.info('Policy issued', 'afterPolicyIssued');
+  logService.info('Policy issued', 'afterPolicyIssued', {
+    policyId: policy?.policy_id,
+  });
 
-  // Stub - implement your logic here
+  // TODO: Implement provider-specific logic. Example:
+  //
+  // import { PaymentProviderService } from '../interfaces/provider.interfaces';
+  // const providerService = container.resolve<PaymentProviderService>(ServiceToken.PROVIDER_SERVICE);
+  // const customer = await providerService.createCustomer({
+  //   email: policy.policyholder?.email,
+  //   name: policy.policyholder?.first_name,
+  //   metadata: { policy_id: policy.policy_id },
+  // });
+  //
+  // const rootClient = container.resolve(ServiceToken.ROOT_CLIENT);
+  // await rootClient.updatePolicy(policy.policy_id, {
+  //   app_data: { provider_customer_id: customer.id },
+  // });
 }
 
 /**
@@ -49,8 +74,12 @@ export function afterPolicyUpdated({
  * Called after a policy is cancelled
  *
  * TODO: Implement policy cancellation logic
+ * - Resolve provider service via DI token
+ * - Cancel the subscription in the provider if applicable
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
  */
-export function afterPolicyCancelled({ policy }: { policy: any }): void {
+export async function afterPolicyCancelled({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
@@ -58,7 +87,14 @@ export function afterPolicyCancelled({ policy }: { policy: any }): void {
     policyId: policy.policy_id,
   });
 
-  // Stub - implement your logic here
+  // TODO: Implement provider-specific logic. Example:
+  //
+  // import { PaymentProviderService } from '../interfaces/provider.interfaces';
+  // const providerService = container.resolve<PaymentProviderService>(ServiceToken.PROVIDER_SERVICE);
+  // const subscriptionId = policy.app_data?.provider_subscription_id;
+  // if (subscriptionId) {
+  //   await providerService.cancelSubscription(subscriptionId);
+  // }
 }
 
 /**

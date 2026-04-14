@@ -31,7 +31,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testTimeout: 10000,
   clearMocks: true,
-  resetMocks: true,
+  resetMocks: true, // All mocks are reset between tests — set return values in beforeEach, not describe/module scope
   restoreMocks: true,
 
   // Note: --forceExit flag is added in package.json scripts to suppress exit warnings

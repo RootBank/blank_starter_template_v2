@@ -21,6 +21,12 @@ export interface EnvironmentConfig {
   providerPublishableKey: string;
   providerSecretKey: string;
   providerProductId: string;
+  /**
+   * Provider-specific extra config keys.
+   * Use for any config your provider needs beyond the standard fields above.
+   * Example: Adyen's merchantAccount, GoCardless's environment mode, etc.
+   */
+  providerExtraConfig?: Record<string, string>;
 }
 
 export interface ConfigMap {
@@ -87,6 +93,7 @@ export class ConfigurationService {
       providerProductId: env.PROVIDER_PRODUCT_ID_LIVE,
       rootApiKey: env.ROOT_API_KEY_LIVE,
       rootBaseUrl: env.ROOT_BASE_URL_LIVE,
+      providerExtraConfig: {},
     };
 
     const sandbox: EnvironmentConfig = {
@@ -98,6 +105,7 @@ export class ConfigurationService {
       providerProductId: env.PROVIDER_PRODUCT_ID_TEST,
       rootApiKey: env.ROOT_API_KEY_SANDBOX,
       rootBaseUrl: env.ROOT_BASE_URL_SANDBOX,
+      providerExtraConfig: {},
     };
 
     return {
@@ -223,5 +231,18 @@ export class ConfigurationService {
    */
   public getTimeDelayMs(): number {
     return parseInt(this.currentConfig.timeDelayInMilliseconds, 10);
+  }
+
+  /**
+   * Get a provider-specific extra config value.
+   * Returns undefined if the key doesn't exist.
+   *
+   * @example
+   * ```typescript
+   * const merchantAccount = config.getExtra('merchantAccount');
+   * ```
+   */
+  public getExtra(key: string): string | undefined {
+    return this.currentConfig.providerExtraConfig?.[key];
   }
 }

@@ -114,6 +114,49 @@ export interface WebhookEvent {
   data: { object: any };
 }
 
+/**
+ * Parsed webhook event — provider-agnostic structure after parsing.
+ * The WebhookParser converts raw provider payloads into this shape,
+ * allowing webhook-hooks.ts to work with any provider format.
+ *
+ * Examples of provider-specific payloads that map to this:
+ * - Stripe: `{ type, data: { object } }` → single ParsedWebhookEvent
+ * - Adyen: `{ notificationItems: [...] }` → multiple ParsedWebhookEvents
+ * - GoCardless: `{ events: [...] }` → multiple ParsedWebhookEvents
+ */
+export interface ParsedWebhookEvent {
+  /** The event type string (e.g., 'payment.succeeded', 'AUTHORISATION') */
+  eventType: string;
+  /** The primary reference ID for the event (e.g., payment ID, subscription ID) */
+  reference: string;
+  /** The parsed event data */
+  data: Record<string, unknown>;
+  /** The raw event object for provider-specific access */
+  rawEvent: unknown;
+}
+
+/**
+ * WebhookParser — converts provider-specific webhook payloads into ParsedWebhookEvents.
+ * Implement this per provider to decouple webhook-hooks.ts from event structure.
+ *
+ * Register as ServiceToken.WEBHOOK_PARSER in container.setup.ts.
+ */
+export interface WebhookParser {
+  /**
+   * Verify the webhook signature and parse the body into normalized events.
+   * @param headers - The raw request headers
+   * @param body - The raw request body
+   * @param secret - The webhook signing secret
+   * @returns Array of parsed events (most providers return 1, some batch multiple)
+   * @throws Error if signature verification fails
+   */
+  verifyAndParse(
+    headers: Record<string, string>,
+    body: string | Buffer,
+    secret: string,
+  ): ParsedWebhookEvent[];
+}
+
 export interface CreateCustomerParams {
   email: string;
   name?: string;

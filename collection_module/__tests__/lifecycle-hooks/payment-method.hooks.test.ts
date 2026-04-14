@@ -1,9 +1,10 @@
 /**
  * Payment Method Hooks Tests
  *
- * These tests cover the stub behaviour.
- * After implementing provider-specific logic, extend these tests with
- * your provider client mocks.
+ * STUB-TEST: These tests validate the stub/logging behaviour of the template hooks.
+ * When you implement provider-specific logic, replace the test bodies with
+ * provider-specific assertions. The beforeEach DI boilerplate and mock container
+ * structure should be preserved — just extend it with your provider mocks.
  *
  * See: docs/10-TESTING.md for testing patterns
  */
@@ -27,6 +28,9 @@ describe('Payment Method Hooks', () => {
     mockContainer = {
       resolve: jest.fn((token: symbol) => {
         if (token === ServiceToken.LOG_SERVICE) return mockLogService;
+        // STUB-TEST: When implementing, add your provider mocks here:
+        // if (token === ServiceToken.PROVIDER_SERVICE) return mockProviderService;
+        // if (token === ServiceToken.PROVIDER_CLIENT) return mockProviderClient;
         return null;
       }),
     };
@@ -97,8 +101,9 @@ describe('Payment Method Hooks', () => {
   });
 
   describe('afterPolicyPaymentMethodAssigned', () => {
-    it('should log payment method assignment', () => {
-      paymentMethodHooks.afterPolicyPaymentMethodAssigned({ policy: { policy_id: 'pol_123' } });
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log payment method assignment', async () => {
+      await paymentMethodHooks.afterPolicyPaymentMethodAssigned({ policy: { policy_id: 'pol_123' } });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment method assigned to policy',
@@ -109,8 +114,9 @@ describe('Payment Method Hooks', () => {
   });
 
   describe('afterPaymentMethodRemoved', () => {
-    it('should log payment method removal', () => {
-      paymentMethodHooks.afterPaymentMethodRemoved({ policy: { policy_id: 'pol_456' } });
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log payment method removal', async () => {
+      await paymentMethodHooks.afterPaymentMethodRemoved({ policy: { policy_id: 'pol_456' } });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Payment method removed from policy',

@@ -44,6 +44,9 @@ npm test
 npm run build
 npm run lint
 npm run scaffold:provider -- --help   # full options
+
+# Pre-flight check (run before building a new provider)
+cd collection_module && npm install && npm test && npm run build
 ```
 
 ## Conventions

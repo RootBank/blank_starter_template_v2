@@ -85,8 +85,10 @@ export function renderViewPaymentMethod(): string {
  * Called after a payment method is assigned to a policy.
  *
  * TODO: Attach the payment method to the provider customer record if required.
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
  */
-export function afterPolicyPaymentMethodAssigned({ policy }: { policy: any }): void {
+export async function afterPolicyPaymentMethodAssigned({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
@@ -94,15 +96,24 @@ export function afterPolicyPaymentMethodAssigned({ policy }: { policy: any }): v
     policyId: policy.policy_id,
   });
 
-  // Stub — implement your logic here
+  // TODO: Implement provider-specific logic. Example:
+  //
+  // import { PaymentProviderService } from '../interfaces/provider.interfaces';
+  // const providerService = container.resolve<PaymentProviderService>(ServiceToken.PROVIDER_SERVICE);
+  // await providerService.attachPaymentMethod({
+  //   paymentMethodId: policy.payment_method?.module?.id,
+  //   customerId: policy.app_data?.provider_customer_id,
+  // });
 }
 
 /**
  * Called after a payment method is removed from a policy.
  *
  * TODO: Detach the payment method from the provider if required.
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
  */
-export function afterPaymentMethodRemoved({ policy }: { policy: any }): void {
+export async function afterPaymentMethodRemoved({ policy }: { policy: any }): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 

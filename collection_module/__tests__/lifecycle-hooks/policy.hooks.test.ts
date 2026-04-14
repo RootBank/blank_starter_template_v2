@@ -1,5 +1,10 @@
 /**
  * Policy Hooks Tests
+ *
+ * STUB-TEST: These tests validate the stub/logging behaviour of the template hooks.
+ * When you implement provider-specific logic, replace the test bodies with
+ * provider-specific assertions. The beforeEach DI boilerplate and mock container
+ * structure should be preserved — just extend it with your provider mocks.
  */
 
 import * as policyHooks from '../../code/lifecycle-hooks/policy.hooks';
@@ -21,6 +26,9 @@ describe('Policy Hooks', () => {
     mockContainer = {
       resolve: jest.fn((token: symbol) => {
         if (token === ServiceToken.LOG_SERVICE) return mockLogService;
+        // STUB-TEST: When implementing, add your provider mocks here:
+        // if (token === ServiceToken.PROVIDER_SERVICE) return mockProviderService;
+        // if (token === ServiceToken.ROOT_CLIENT) return mockRootClient;
         return null;
       }),
     };
@@ -29,12 +37,16 @@ describe('Policy Hooks', () => {
   });
 
   describe('afterPolicyIssued', () => {
-    it('should log policy issuance', () => {
-      policyHooks.afterPolicyIssued();
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log policy issuance', async () => {
+      const policy = { policy_id: 'policy_123' };
+
+      await policyHooks.afterPolicyIssued({ policy });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Policy issued',
-        'afterPolicyIssued'
+        'afterPolicyIssued',
+        { policyId: 'policy_123' }
       );
     });
   });
@@ -79,13 +91,14 @@ describe('Policy Hooks', () => {
   });
 
   describe('afterPolicyCancelled', () => {
-    it('should log policy cancellation with policy ID', () => {
+    // STUB-TEST: replace with provider-specific assertions when implementing
+    it('should log policy cancellation with policy ID', async () => {
       const policy = {
         policy_id: 'policy_111',
         status: 'cancelled',
       };
 
-      policyHooks.afterPolicyCancelled({ policy });
+      await policyHooks.afterPolicyCancelled({ policy });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Policy cancelled',
@@ -94,10 +107,10 @@ describe('Policy Hooks', () => {
       );
     });
 
-    it('should log policy cancellation without policy ID', () => {
+    it('should log policy cancellation without policy ID', async () => {
       const policy = {};
 
-      policyHooks.afterPolicyCancelled({ policy });
+      await policyHooks.afterPolicyCancelled({ policy });
 
       expect(mockLogService.info).toHaveBeenCalledWith(
         'Policy cancelled',

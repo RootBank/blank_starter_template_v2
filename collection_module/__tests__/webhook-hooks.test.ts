@@ -1,9 +1,12 @@
 /**
  * Webhook Hooks Tests
  *
- * These tests cover the stub behaviour.
- * After implementing signature verification and event routing,
- * add provider-specific tests for your event types.
+ * STUB-TEST: These tests validate the stub/logging behaviour of the template webhook handler.
+ * When you implement signature verification and event routing, replace these tests
+ * with provider-specific assertions covering:
+ * - Signature verification (valid + invalid)
+ * - Event routing for each event type you handle
+ * - Error handling for malformed payloads
  *
  * See: docs/10-TESTING.md for testing patterns
  * See: docs/STRIPE-REFERENCE.md#webhook-routing for a full example
@@ -26,6 +29,9 @@ describe('processWebhookRequest', () => {
     mockContainer = {
       resolve: jest.fn((token: symbol) => {
         if (token === ServiceToken.LOG_SERVICE) return mockLogService;
+        // STUB-TEST: When implementing, add your provider mocks here:
+        // if (token === ServiceToken.PROVIDER_CLIENT) return mockProviderClient;
+        // if (token === ServiceToken.WEBHOOK_PARSER) return mockWebhookParser;
         return null;
       }),
     };

@@ -11,6 +11,36 @@ Tests mirror the `code/` structure in `__tests__/`. Run with `npm test`.
 - Use mock services from `__tests__/test-helpers.ts`.
 - Never hit real APIs in unit tests.
 
+## Important: `resetMocks: true`
+
+This project uses `resetMocks: true` in `jest.config.js`. This means **all mock implementations and return values are reset between tests**.
+
+**Always set mock return values inside `beforeEach` or inside each `it` block — never at module scope or `describe` scope.**
+
+```typescript
+// ✗ DON'T — mock will be silently cleared before each test
+describe('MyService', () => {
+  const mockClient = { fetch: jest.fn().mockResolvedValue({ id: '123' }) }; // ← cleared!
+  
+  it('should work', async () => {
+    // mockClient.fetch is now jest.fn() with no return value
+  });
+});
+
+// ✓ DO — set mocks inside beforeEach
+describe('MyService', () => {
+  let mockClient: any;
+
+  beforeEach(() => {
+    mockClient = { fetch: jest.fn().mockResolvedValue({ id: '123' }) };
+  });
+
+  it('should work', async () => {
+    // mockClient.fetch still returns { id: '123' }
+  });
+});
+```
+
 ## Pattern for service tests
 
 ```typescript

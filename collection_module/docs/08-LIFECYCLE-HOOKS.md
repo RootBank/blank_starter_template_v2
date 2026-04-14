@@ -20,6 +20,8 @@ Lifecycle hooks are functions exported from `code/main.ts` that Root Platform ca
 - Use `LogService` for all logging.
 - Return the correct shape for each hook (see Root Platform docs).
 - Render hooks return an HTML string — use `RenderService` and `escapeHtml()`.
+- **DI resolution only**: Never import provider classes directly in hooks. Use `container.resolve(ServiceToken.PROVIDER_SERVICE)` and type as `PaymentProviderService` (from `provider.interfaces.ts`), not as a concrete class like `StripeService` or `AdyenService`.
+- **Async signatures**: Hooks that call provider APIs should be `async` and return `Promise<void>`. The DI container and provider service calls are async operations.
 
 ## Related
 

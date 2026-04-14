@@ -12,14 +12,18 @@ import { LogService } from '../services/log.service';
  * Called after a payment is created
  *
  * TODO: Implement payment creation logic
+ * - Resolve provider service via DI token
+ * - Create a payment intent in the provider
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
  */
-export function afterPaymentCreated({
+export async function afterPaymentCreated({
   policy,
   payment,
 }: {
   policy: any;
   payment: any;
-}): void {
+}): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
@@ -28,21 +32,32 @@ export function afterPaymentCreated({
     paymentId: payment.payment_id,
   });
 
-  // Stub - implement your logic here
+  // TODO: Implement provider-specific logic. Example:
+  //
+  // import { PaymentProviderService } from '../interfaces/provider.interfaces';
+  // const providerService = container.resolve<PaymentProviderService>(ServiceToken.PROVIDER_SERVICE);
+  // await providerService.createPaymentIntent({
+  //   amount: payment.amount,
+  //   currency: payment.currency,
+  //   customerId: policy.app_data?.provider_customer_id,
+  //   metadata: { payment_id: payment.payment_id },
+  // });
 }
 
 /**
  * Called after a payment is updated
  *
  * TODO: Implement payment update logic
+ *
+ * IMPORTANT: Use DI tokens only — never import provider classes directly.
  */
-export function afterPaymentUpdated({
+export async function afterPaymentUpdated({
   policy,
   payment,
 }: {
   policy: any;
   payment: any;
-}): void {
+}): Promise<void> {
   const container = getContainer();
   const logService = container.resolve<LogService>(ServiceToken.LOG_SERVICE);
 
@@ -51,5 +66,5 @@ export function afterPaymentUpdated({
     paymentId: payment.payment_id,
   });
 
-  // Stub - implement your logic here
+  // Stub — implement your logic here
 }

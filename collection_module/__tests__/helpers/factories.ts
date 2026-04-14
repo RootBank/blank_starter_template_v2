@@ -11,6 +11,12 @@
  * See: docs/10-TESTING.md for testing patterns
  */
 
+import {
+  ProviderCustomer,
+  ProviderPaymentIntent,
+  ProviderPaymentMethod,
+} from '../../code/interfaces/provider.interfaces';
+
 // ── Root Platform factories ───────────────────────────────────────────────────
 
 export const createMockRootPolicy = (overrides?: Partial<{
@@ -79,36 +85,45 @@ export const createMockRootPayment = (overrides?: Partial<{
   ...overrides,
 });
 
-// ── Generic provider factories ────────────────────────────────────────────────
-// TODO: Replace these with your provider's actual API response shapes.
-// Field names should match exactly what the provider API returns.
+// ── Provider-agnostic response factories ─────────────────────────────────────
+// These return shapes matching the interfaces in provider.interfaces.ts.
+// After scaffolding, create a provider-specific factory file
+// (e.g., __tests__/helpers/{provider}-factories.ts) for raw API response shapes.
 
-export const createMockProviderCustomer = (overrides?: Record<string, any>) => ({
+export const createMockProviderCustomer = (overrides?: Partial<ProviderCustomer>): ProviderCustomer => ({
   id: 'cust_test_123',
   email: 'test@example.com',
   name: 'Test Customer',
   metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
   ...overrides,
 });
 
-export const createMockProviderPaymentMethod = (overrides?: Record<string, any>) => ({
+export const createMockProviderPaymentMethod = (overrides?: Partial<ProviderPaymentMethod>): ProviderPaymentMethod => ({
   id: 'pm_test_123',
   type: 'card',
-  status: 'active',
-  metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
   ...overrides,
 });
 
-export const createMockProviderPayment = (overrides?: Record<string, any>) => ({
+export const createMockProviderPayment = (overrides?: Partial<ProviderPaymentIntent>): ProviderPaymentIntent => ({
   id: 'pay_test_123',
   amount: 10000,
   currency: 'ZAR',
   status: 'pending',
-  description: 'Monthly premium',
-  metadata: {},
-  created_at: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
+
+/**
+ * Create a mock raw provider API response.
+ * This returns a generic shape — after scaffolding, create a provider-specific
+ * factory file (e.g., __tests__/helpers/{provider}-factories.ts) with the
+ * actual API response structure for your provider.
+ *
+ * Example (Adyen): { pspReference, resultCode, amount: { value, currency } }
+ * Example (GoCardless): { id, status, links: { mandate } }
+ */
+export const createMockProviderResponse = (overrides?: Record<string, any>) => ({
+  id: 'raw_response_123',
+  status: 'active',
   ...overrides,
 });
 

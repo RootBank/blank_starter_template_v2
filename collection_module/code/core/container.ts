@@ -149,6 +149,9 @@ export const ServiceToken = {
   PROVIDER_SERVICE: Symbol('ProviderService'),
   RENDER_SERVICE: Symbol('RenderService'),
 
+  // Webhook processing
+  WEBHOOK_PARSER: Symbol('WebhookParser'),
+
   // Add your controller tokens here:
   // EXAMPLE_CONTROLLER: Symbol('ExampleController'),
 } as const;

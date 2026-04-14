@@ -7,6 +7,7 @@
 | Step | What happens |
 |---|---|
 | [Prerequisites](#prerequisites) | What you need before starting |
+| [Step 0 — Pre-flight setup](#step-0--pre-flight-setup) | Install deps, create env.ts, confirm tests pass |
 | [Step 1 — Prepare your spec](#step-1--prepare-your-spec) | Fill SPEC-TEMPLATE.md or run `extract:spec` |
 | [Step 2 — Scaffold the provider](#step-2--scaffold-the-provider) | Generate 7 files in one command |
 | [Step 3 — Implement the stubs](#step-3--implement-the-stubs) | Fill in the provider-specific logic |
@@ -24,6 +25,26 @@
 - `cd collection_module && npm install`
 - `ANTHROPIC_API_KEY` set in your environment (only needed for `extract:spec`)
 - Provider API docs — URL, PDF, or OpenAPI file
+
+---
+
+## Step 0 — Pre-flight setup
+
+Run these before writing any code. They ensure the environment is ready and baseline tests pass.
+
+1. Install dependencies (once):
+   ```bash
+   cd collection_module && npm install
+   ```
+2. Ensure `code/env.ts` exists:
+   ```bash
+   cp code/env.sample.ts code/env.ts  # only if env.ts doesn't exist
+   ```
+3. Confirm baseline tests pass:
+   ```bash
+   npm test
+   ```
+   If tests fail here, fix the environment before proceeding.
 
 ---
 
@@ -198,16 +219,22 @@ See [STRIPE-REFERENCE.md § Webhook Routing](./STRIPE-REFERENCE.md#webhook-routi
 | Hook | What to call |
 |---|---|
 | `afterPolicyIssued` | `providerService.createCustomer(...)` then update `policy.app_data` |
+| `afterPolicyCancelled` | `providerService.cancelSubscription(...)` if applicable |
 | `afterPolicyPaymentMethodAssigned` | `providerService.attachPaymentMethod(...)` |
 | `afterPaymentCreated` | `providerService.createPaymentIntent(...)` |
 
 See [STRIPE-REFERENCE.md § Lifecycle Hooks](./STRIPE-REFERENCE.md#lifecycle-hooks) for exact implementations.
 
-### 4d. Config
+### 4d. Config (4 files to update)
 
-**File:** `code/env.sample.ts`
+When adding provider-specific configuration, check these files:
 
-Add the provider's config keys:
+1. **`code/env.sample.ts`** — add env var placeholders
+2. **`code/services/config.service.ts`** — add to `EnvironmentConfig` interface if needed (or use `providerExtraConfig`)
+3. **`__tests__/setup.ts`** — add mock values for new env exports
+4. **`__tests__/test-helpers.ts`** — add to `createMockConfigService()` config map
+
+Add the provider's config keys to `code/env.sample.ts`:
 
 ```typescript
 PROVIDER_SECRET_KEY_LIVE:             '',
