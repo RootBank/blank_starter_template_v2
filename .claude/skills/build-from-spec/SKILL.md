@@ -14,6 +14,18 @@ Build a collection module from a provider spec, API doc, PDF, or URL.
 
 ---
 
+## Step 0 — Pre-flight check
+
+BEFORE writing any provider files:
+1. Run `cd collection_module && npm install` once (do NOT run npm install more than once unless it fails)
+2. Ensure `code/env.ts` exists — if not, run `cp code/env.sample.ts code/env.ts`
+3. Run `cd collection_module && npm test` to confirm a green baseline
+4. Run `cd collection_module && npm run build` to confirm clean compilation
+
+If any of these fail, fix the issue before proceeding to Step 1.
+
+---
+
 ## Step 1 — Get a spec
 
 If the user provided a URL, PDF, or OpenAPI file, extract it:
@@ -53,7 +65,11 @@ cd collection_module && npm run scaffold:provider -- \
   --reason="<why>"
 ```
 
-Show the user the CLI output. **7 files** should be created:
+**IMPORTANT: Always run the scaffold script.** Do not manually create provider files from scratch.
+The scaffold generates consistent boilerplate with correct imports, DI tokens, and TODO markers.
+Only write files from scratch if the scaffold fails or produces incorrect output.
+
+Show the user the CLI output. **8 files** should be created:
 - `code/clients/{provider}-client.ts`
 - `code/services/{provider}.service.ts`
 - `code/adapters/{provider}-to-root-adapter.ts`
@@ -61,6 +77,7 @@ Show the user the CLI output. **7 files** should be created:
 - `__tests__/clients/{provider}-client.test.ts`
 - `__tests__/services/{provider}.service.test.ts`
 - `__tests__/adapters/{provider}-to-root-adapter.test.ts`
+- `__tests__/helpers/{provider}-factories.ts`
 
 ## Step 3 — Implement stubs
 
@@ -71,6 +88,8 @@ Read each generated file and implement the `// TODO` sections. Use `docs/STRIPE-
 - Log at the start of every method: `this.logService.info('Creating customer', 'ProviderService', params)`
 - Throw `ModuleError` on failures, not raw errors
 - Use `LogService` only — no `console.log`
+- **DI resolution only in hooks**: Never import provider classes directly in lifecycle hooks. Use `container.resolve(ServiceToken.PROVIDER_SERVICE)` and type as `PaymentProviderService` interface.
+- **File reading rule**: If you have already explored the codebase via agent exploration (Glob, Grep, Read), trust the output. Do not re-read files you have already read in this session unless the file has been modified since you last read it.
 
 ### Service methods to implement
 
@@ -133,6 +152,7 @@ container.register(ServiceToken.PROVIDER_SERVICE, {
 | Hook file | What to call |
 |---|---|
 | `policy.hooks.ts` → `afterPolicyIssued` | `providerService.createCustomer(...)` then update `policy.app_data` |
+| `policy.hooks.ts` → `afterPolicyCancelled` | `providerService.cancelSubscription(...)` if applicable |
 | `payment-method.hooks.ts` → `afterPolicyPaymentMethodAssigned` | `providerService.attachPaymentMethod(...)` |
 | `payment.hooks.ts` → `afterPaymentCreated` | `providerService.createPaymentIntent(...)` |
 

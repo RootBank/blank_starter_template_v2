@@ -8,6 +8,18 @@ Build a collection module from a provider spec, API doc, PDF, or URL.
 
 ## Quick steps
 
+**Step 0 — Pre-flight check**
+
+Before writing any code, run these:
+
+```bash
+cd collection_module && npm install
+# Ensure code/env.ts exists (copy from env.sample.ts if missing)
+cd collection_module && npm test && npm run build
+```
+
+If anything fails, fix it before proceeding. Do NOT run `npm install` more than once unless it fails.
+
 **Step 1 — Get a spec**
 
 If the user provided a URL or PDF, run:
@@ -19,6 +31,8 @@ cd collection_module && npm run extract:spec -- --input=<url-or-path> --output=d
 If the user already has a filled `docs/SPEC-TEMPLATE.md`, skip to Step 2.
 
 **Step 2 — Scaffold**
+
+**IMPORTANT**: Always run the scaffold command. Do not write provider files manually unless the scaffold fails.
 
 ```bash
 cd collection_module && npm run scaffold:provider -- --from-spec=docs/provider-spec.md --reason="<why>"
