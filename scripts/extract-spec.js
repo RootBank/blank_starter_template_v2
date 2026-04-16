@@ -18,7 +18,8 @@
  *   --help      Show this help
  *
  * Env:
- *   ANTHROPIC_API_KEY   Required. Claude API key.
+ *   ANTHROPIC_API_KEY   Optional. If set, Claude fills the template automatically.
+ *                       If unset, runs in passthrough mode (raw content + template).
  */
 
 const fs = require('fs');
@@ -40,10 +41,10 @@ if (!args.input) {
   process.exit(1);
 }
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  log('error', 'ANTHROPIC_API_KEY environment variable is not set');
-  log('error', 'Export it: export ANTHROPIC_API_KEY=sk-ant-...');
-  process.exit(1);
+const useAi = !args['no-ai'] && !!process.env.ANTHROPIC_API_KEY;
+
+if (!process.env.ANTHROPIC_API_KEY && !args['no-ai']) {
+  log('info', 'Running in passthrough mode (raw content + template for manual/AI review)');
 }
 
 const inputSource = args.input;
@@ -75,9 +76,15 @@ async function main() {
   const rawContent = await extractContent(inputSource);
   log('info', `Extracted ${rawContent.length} characters from source`);
 
-  // 3. Call Claude to fill the spec
-  log('info', 'Calling Claude to fill spec template...');
-  const filledSpec = await fillSpecWithClaude(rawContent, specTemplate, inputSource);
+  // 3. Fill the spec — with Claude if available, otherwise passthrough
+  let filledSpec;
+  if (useAi) {
+    log('info', 'Calling Claude to fill spec template...');
+    filledSpec = await fillSpecWithClaude(rawContent, specTemplate, inputSource);
+  } else {
+    log('info', 'Passthrough mode — embedding raw content alongside template for manual review');
+    filledSpec = buildPassthroughSpec(rawContent, specTemplate, inputSource);
+  }
 
   // 4. Write output
   if (isDryRun) {
@@ -238,6 +245,34 @@ function extractFromFile(filePath) {
   return content;
 }
 
+// ─── Passthrough (no-AI) spec builder ─────────────────────────────────────────
+
+function buildPassthroughSpec(rawContent, specTemplate, sourceLabel) {
+  const MAX_EMBED = 120000;
+  const truncated = rawContent.length > MAX_EMBED;
+  const content = truncated ? rawContent.slice(0, MAX_EMBED) : rawContent;
+
+  return `${specTemplate}
+
+---
+
+## Raw Source Content
+
+> **Source:** \`${sourceLabel}\`
+> **Mode:** Passthrough (no AI extraction — fill the sections above manually using the content below)
+${truncated ? `> **Note:** Content truncated from ${rawContent.length} to ${MAX_EMBED} characters\n` : ''}
+
+<details>
+<summary>Click to expand raw content (${content.length} characters)</summary>
+
+\`\`\`
+${content}
+\`\`\`
+
+</details>
+`;
+}
+
 // ─── Claude API call ──────────────────────────────────────────────────────────
 
 async function fillSpecWithClaude(rawContent, specTemplate, sourceLabel) {
@@ -318,6 +353,7 @@ function parseArgs(argv) {
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') { result.help = true; continue; }
     if (arg === '--dry-run') { result['dry-run'] = true; continue; }
+    if (arg === '--no-ai') { result['no-ai'] = true; continue; }
     const match = arg.match(/^--([^=]+)=(.*)$/);
     if (match) result[match[1]] = match[2];
   }
@@ -341,10 +377,12 @@ Input types:
 Options:
   --output     Output path (default: docs/SPEC-EXTRACTED.md)
   --dry-run    Print extracted spec without writing file
+  --no-ai      Skip Claude — output the spec template with raw content appended
   --help       Show this help
 
 Env:
-  ANTHROPIC_API_KEY   Required. Get from console.anthropic.com.
+  ANTHROPIC_API_KEY   Optional. When set, Claude fills the template automatically.
+                      Works fine without it — runs in passthrough mode (same as --no-ai).
 
 Examples:
   # From URL

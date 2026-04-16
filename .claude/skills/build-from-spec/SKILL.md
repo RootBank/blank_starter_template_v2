@@ -28,7 +28,7 @@ If any of these fail, fix the issue before proceeding to Step 1.
 
 ## Step 1 — Get a spec
 
-If the user provided a URL, PDF, or OpenAPI file, extract it:
+If the user provided a URL, PDF, or OpenAPI file, **always run extract:spec** — it does NOT require an API key. Without `ANTHROPIC_API_KEY` it runs in passthrough mode, outputting the template with raw source content appended for you to fill in. This is the expected workflow.
 
 ```bash
 cd collection_module && npm run extract:spec -- --input=$ARGUMENTS --output=docs/provider-spec.md
