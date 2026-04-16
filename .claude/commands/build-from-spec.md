@@ -22,7 +22,7 @@ If anything fails, fix it before proceeding. Do NOT run `npm install` more than 
 
 **Step 1 — Get a spec**
 
-If the user provided a URL or PDF, run:
+If the user provided a URL or PDF, **always run extract:spec** — it does NOT require an API key. It works in passthrough mode without one.
 
 ```bash
 cd collection_module && npm run extract:spec -- --input=<url-or-path> --output=docs/provider-spec.md

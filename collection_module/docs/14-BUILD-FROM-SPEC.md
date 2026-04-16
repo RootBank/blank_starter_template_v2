@@ -23,7 +23,6 @@
 
 - Node ≥ 18, npm ≥ 8
 - `cd collection_module && npm install`
-- `ANTHROPIC_API_KEY` set in your environment (only needed for `extract:spec`)
 - Provider API docs — URL, PDF, or OpenAPI file
 
 ---
@@ -65,7 +64,7 @@ npm run extract:spec -- --input=./provider-api-docs.pdf --output=docs/my-provide
 npm run extract:spec -- --input=./openapi.json --output=docs/my-provider-spec.md
 ```
 
-The script calls Claude to extract and fill `docs/SPEC-TEMPLATE.md` fields from the doc. Review the output and fill in any gaps.
+If `ANTHROPIC_API_KEY` is set, Claude fills the template automatically. Otherwise the script falls back to passthrough mode — it outputs the template with the raw source content appended so you can fill it in manually. You can also force passthrough with `--no-ai`. Review the output and fill in any gaps.
 
 ### Path B — Fill the template manually
 
@@ -306,7 +305,7 @@ This checks [docs/15-SELF-REVIEW.md](./15-SELF-REVIEW.md) criteria: critical blo
 | `file already exists — not overwriting` | Scaffold run twice | Delete file or use `--dry-run` to preview |
 | `Cannot resolve PROVIDER_CLIENT` | DI registration missing | Add registration in `container.setup.ts` |
 | `Webhook signature invalid` | Wrong header name or secret | Check `--webhook-header` and `providerWebhookSigningSecret` config |
-| `extract:spec failed — ANTHROPIC_API_KEY` | API key not set | `export ANTHROPIC_API_KEY=sk-ant-...` |
+| `extract:spec running in passthrough mode` | API key not set | This is normal — review the output and fill in the template sections manually |
 | `PDF parse error` | Scanned/image PDF | Use a text-based PDF or paste content into SPEC-TEMPLATE.md manually |
 | `fetch error on URL` | JS-rendered page | Save page as PDF and use `--input=./page.pdf` |
 

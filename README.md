@@ -66,7 +66,7 @@ cd collection_module
 npm run extract:spec -- --input=<url-or-pdf-or-openapi> --output=docs/myprovider-spec.md
 ```
 
-Requires `ANTHROPIC_API_KEY`. Review the output and fill any gaps.
+Uses Claude to fill the template if `ANTHROPIC_API_KEY` is set. Without it, falls back to passthrough mode (template + raw content). Review the output and fill any gaps.
 
 ### 2. Scaffold provider files
 
@@ -170,5 +170,5 @@ All docs: `01-GETTING-STARTED`, `04-SERVICES`, `05-CONTROLLERS`, `07-ADAPTERS`, 
 
 - **Node.js** >= 18, **npm** >= 8
 - **Root Platform account** — [rootplatform.com](https://rootplatform.com)
-- **`ANTHROPIC_API_KEY`** — only for `extract:spec`
+- **`ANTHROPIC_API_KEY`** — optional, enhances `extract:spec` with AI extraction
 - **`root-platform-cli`** — only for deployment: `npm i -g root-platform-cli`
