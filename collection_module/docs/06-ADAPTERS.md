@@ -123,5 +123,11 @@ describe('GoCardlessToRootAdapter', () => {
 ## Related
 
 - `code/interfaces/provider.interfaces.ts` — `ProviderToRootAdapter` contract and `ConvertPaymentParams`
-- `docs/05-CONTROLLERS.md` — How controllers use adapters
+- `docs/04-CONTROLLERS.md` — How controllers use adapters
 - `docs/STRIPE-REFERENCE.md` — Full working adapter example
+
+## You've understood this if…
+
+- You can state the one rule adapters must never break.
+- You can sketch a `mapStatus` table from a provider's status enum to Root's three states.
+- You know which provider statuses Root collapses to `successful`, `failed`, and `pending`.

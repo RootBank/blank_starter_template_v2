@@ -6,7 +6,7 @@
  * TODO: After scaffolding your provider, implement the render functions
  * using your provider client to create setup/payment intents.
  *
- * See: docs/08-LIFECYCLE-HOOKS.md for patterns
+ * See: docs/07-LIFECYCLE-HOOKS.md for patterns
  * See: docs/STRIPE-REFERENCE.md#lifecycle-hooks for a complete example
  */
 

@@ -190,4 +190,10 @@ If you are using AI-assisted development tools (Cursor, Claude Code, Copilot, et
 - [00-OVERVIEW.md](./00-OVERVIEW.md) -- Architecture overview and directory layout
 - [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) -- DI container deep dive
 - [03-PROVIDER-INTERFACE.md](./03-PROVIDER-INTERFACE.md) -- Implementing a new provider
-- [14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) -- End-to-end spec-to-implementation workflow
+- [13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) -- End-to-end spec-to-implementation workflow
+
+## You've understood this if…
+
+- You can run the pre-flight check (`npm install && npm test && npm run build`) and have it pass.
+- You know where `env.ts` lives and which fields are required vs optional.
+- You can name the script you'd run first to scaffold a new provider.

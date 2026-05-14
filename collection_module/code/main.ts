@@ -31,10 +31,10 @@
  *
  * ── Implementation guide ──────────────────────────────────────────────────────
  *
- * See docs/08-LIFECYCLE-HOOKS.md   for hook implementation patterns
- * See docs/09-WEBHOOKS.md          for webhook routing patterns
+ * See docs/07-LIFECYCLE-HOOKS.md   for hook implementation patterns
+ * See docs/08-WEBHOOKS.md          for webhook routing patterns
  * See docs/STRIPE-REFERENCE.md     for a complete working example of all hooks
- * See docs/14-BUILD-FROM-SPEC.md   for the full build-from-spec workflow
+ * See docs/13-BUILD-FROM-SPEC.md   for the full build-from-spec workflow
  */
 
 import { getContainer } from './core/container.setup';

@@ -1,0 +1,38 @@
+# Collection Module Template
+
+> Root Platform's template for building payment-collection modules. Each module integrates one payment provider (Stripe, GoCardless, etc.) with Root Platform via three interfaces (Client, Service, Adapter), DI-injected services, lifecycle hooks, and webhooks. Stripe is the reference implementation. The docs below are the canonical reference for extending the template.
+
+## Entry points
+
+- [CLAUDE.md](CLAUDE.md): Routing table and conventions for Claude (and similar agents).
+- [AGENT.md](AGENT.md): Vendor-neutral, self-contained entry point for non-Claude agents (Cursor, Codex, Aider, Continue, Zed). Includes the full doc-improvement prompt and the reusable provider-integration template inline.
+- [llms-full.txt](llms-full.txt): Flat concatenation of every doc below, with `## <name>` anchors per file.
+
+## Docs
+
+- [00-OVERVIEW.md](collection_module/docs/00-OVERVIEW.md): Architecture overview, directory map, key concepts.
+- [01-GETTING-STARTED.md](collection_module/docs/01-GETTING-STARTED.md): Setup, prerequisites, first-run commands.
+- [02-ARCHITECTURE.md](collection_module/docs/02-ARCHITECTURE.md): DI container, ServiceToken symbols, service lifetimes.
+- [03-PROVIDER-INTERFACE.md](collection_module/docs/03-PROVIDER-INTERFACE.md): The three provider interfaces (Client, Service, Adapter) and the step-by-step add-a-provider walkthrough. Now also covers service implementation patterns.
+- [04-CONTROLLERS.md](collection_module/docs/04-CONTROLLERS.md): Thin orchestrator patterns; one controller per event.
+- [05-CLIENTS.md](collection_module/docs/05-CLIENTS.md): SDK vs HTTP client decision table and patterns.
+- [06-ADAPTERS.md](collection_module/docs/06-ADAPTERS.md): Pure data transformation; status mapping.
+- [07-LIFECYCLE-HOOKS.md](collection_module/docs/07-LIFECYCLE-HOOKS.md): Every lifecycle hook Root invokes — signatures, when fired, idempotency.
+- [08-WEBHOOKS.md](collection_module/docs/08-WEBHOOKS.md): Webhook entry point, signature verification, routing.
+- [09-TESTING.md](collection_module/docs/09-TESTING.md): Jest patterns, mock DI, coverage thresholds.
+- [10-DEPLOYMENT.md](collection_module/docs/10-DEPLOYMENT.md): Predeploy checklist, sandbox vs production.
+- [11-CONFIGURATION.md](collection_module/docs/11-CONFIGURATION.md): ConfigurationService and the provider-agnostic field naming convention.
+- [12-ERROR-HANDLING.md](collection_module/docs/12-ERROR-HANDLING.md): Error code reference table, propagation across the provider boundary, idempotency & retry semantics.
+- [13-BUILD-FROM-SPEC.md](collection_module/docs/13-BUILD-FROM-SPEC.md): Master SOP — end-to-end build from a provider spec.
+- [14-SELF-REVIEW.md](collection_module/docs/14-SELF-REVIEW.md): Critical/Major/Minor self-review criteria.
+- [15-PROVIDER-PATTERNS.md](collection_module/docs/15-PROVIDER-PATTERNS.md): SDK vs HTTP side-by-side reference (client, auth, signing, pagination, webhooks, errors, retry).
+- [16-WHEN-TO-DEVIATE.md](collection_module/docs/16-WHEN-TO-DEVIATE.md): When the template doesn't fit, and how to signal the deviation.
+- [GLOSSARY.md](collection_module/docs/GLOSSARY.md): Template-specific and Root-specific terms.
+- [STRIPE-REFERENCE.md](collection_module/docs/STRIPE-REFERENCE.md): The complete working Stripe implementation.
+- [SPEC-TEMPLATE.md](collection_module/docs/SPEC-TEMPLATE.md): Fill-in-the-blanks spec template that drives the scaffolder.
+- [PROVIDER-INTEGRATION-PROMPT.md](collection_module/docs/PROVIDER-INTEGRATION-PROMPT.md): Reusable prompt template for commissioning a new provider integration.
+
+## Slash commands
+
+- [`/build-from-spec`](.claude/commands/build-from-spec.md): Build a new provider from a spec/doc.
+- [`/review-implementation`](.claude/commands/review-implementation.md): Self-review against `14-SELF-REVIEW.md` criteria.

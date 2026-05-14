@@ -4,7 +4,7 @@
  * Verifies webhook signatures and routes provider events to controllers.
  *
  * TODO: After running `npm run scaffold:provider`, implement the three steps below.
- * See: docs/09-WEBHOOKS.md for patterns
+ * See: docs/08-WEBHOOKS.md for patterns
  * See: docs/STRIPE-REFERENCE.md#webhook-routing for a complete working example
  */
 

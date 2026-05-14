@@ -64,8 +64,8 @@ collection_module/
     01-GETTING-STARTED.md                # Setup and first run
     02-ARCHITECTURE.md                   # DI container deep dive
     03-PROVIDER-INTERFACE.md             # Provider contracts
-    14-BUILD-FROM-SPEC.md                # End-to-end spec-to-code workflow (master SOP)
-    15-SELF-REVIEW.md                    # Self-review criteria for AI-generated code
+    13-BUILD-FROM-SPEC.md                # End-to-end spec-to-code workflow (master SOP)
+    14-SELF-REVIEW.md                    # Self-review criteria for AI-generated code
     SPEC-TEMPLATE.md                     # Provider spec template
     STRIPE-REFERENCE.md                  # Complete Stripe reference implementation
   package.json
@@ -149,5 +149,11 @@ collection_module/
 - [01-GETTING-STARTED.md](./01-GETTING-STARTED.md) — Setup and first run
 - [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) — DI container deep dive
 - [03-PROVIDER-INTERFACE.md](./03-PROVIDER-INTERFACE.md) — Implementing a new provider
-- [14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) — End-to-end spec-to-implementation workflow (master SOP)
+- [13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) — End-to-end spec-to-implementation workflow (master SOP)
 - [STRIPE-REFERENCE.md](./STRIPE-REFERENCE.md) — Complete reference implementation example
+
+## You've understood this if…
+
+- You can name the three provider interfaces and the directory each lives in.
+- You can explain why DI tokens are provider-agnostic.
+- You know which doc to open next to scaffold a new provider end-to-end.

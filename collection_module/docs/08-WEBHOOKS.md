@@ -62,3 +62,9 @@ This keeps `webhook-hooks.ts` as a thin router and moves provider-specific parsi
 
 - `code/webhook-hooks.ts` — Stub
 - `docs/STRIPE-REFERENCE.md` — Full working example
+
+## You've understood this if…
+
+- You can trace a webhook from the HTTP entry point through verification, parsing, and routing.
+- You can explain why `verifyWebhookSignature` must use a timing-safe compare.
+- You know where `WebhookParser` is registered and which DI token it uses.
