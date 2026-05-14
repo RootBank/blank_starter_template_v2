@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Regenerate llms-full.txt at the repo root by concatenating CLAUDE.md, AGENT.md,
+ * Regenerate llms-full.txt at the repo root by concatenating CLAUDE.md, AGENTS.md,
  * every numbered doc, the glossary, the Stripe reference, the spec template, and
  * the provider-integration prompt. Each file is preceded by an anchor of the form
  * `## <basename-without-extension>` so an agent can cite individual sections.
@@ -17,7 +17,7 @@ const DOCS = path.join(REPO_ROOT, 'collection_module', 'docs');
 
 const ORDER = [
   path.join(REPO_ROOT, 'CLAUDE.md'),
-  path.join(REPO_ROOT, 'AGENT.md'),
+  path.join(REPO_ROOT, 'AGENTS.md'),
   path.join(DOCS, '00-OVERVIEW.md'),
   path.join(DOCS, '01-GETTING-STARTED.md'),
   path.join(DOCS, '02-ARCHITECTURE.md'),

@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Misc
 *.tsbuildinfo
+
+# Claude Code session-local worktrees
+.claude/worktrees/

@@ -6,7 +6,7 @@
 # Collection Module Template
 
 > AI entry point. Use the table below to find what you need in ≤2 jumps. Don't load docs you don't need.
-> Non-Claude agents: see [`AGENT.md`](AGENT.md). External agents: see [`llms.txt`](llms.txt) (index) and [`llms-full.txt`](llms-full.txt) (flat).
+> Non-Claude agents: see [`AGENTS.md`](AGENTS.md). External agents: see [`llms.txt`](llms.txt) (index) and [`llms-full.txt`](llms-full.txt) (flat).
 
 ## Table of Contents
 
@@ -73,11 +73,13 @@ cd collection_module && npm install && npm test && npm run build
 - **Reference**: Stripe is the working example — read it before writing a new provider
 - **Don't invent semantics** — when source or spec is ambiguous, leave a `TODO(human):` with a specific question instead of guessing
 
-## AGENT
+## AGENTS
 
-# AGENT.md — Vendor-Neutral Entry Point
+# AGENTS.md — Vendor-Neutral Entry Point
 
 > Self-contained orientation for any AI agent (Cursor, Continue, Zed, Aider, Codex, etc.) working in this repo. Mirror of `CLAUDE.md`. Read this file fully before making changes — agents not built on Claude may not follow the links automatically.
+>
+> Filename follows the [agents.md](https://agents.md) convention adopted by OpenAI Codex CLI, Cursor, and Aider. The verbatim doc-improvement prompt further down references "`AGENT.md`" because that's how the original brief was written — content unchanged.
 
 This is the **collection module template** Root Platform engineers use to scaffold new payment-provider integrations. One module = one provider. Stripe is the reference implementation.
 

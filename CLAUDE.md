@@ -1,7 +1,7 @@
 # Collection Module Template
 
 > AI entry point. Use the table below to find what you need in ≤2 jumps. Don't load docs you don't need.
-> Non-Claude agents: see [`AGENT.md`](AGENT.md). External agents: see [`llms.txt`](llms.txt) (index) and [`llms-full.txt`](llms-full.txt) (flat).
+> Non-Claude agents: see [`AGENTS.md`](AGENTS.md). External agents: see [`llms.txt`](llms.txt) (index) and [`llms-full.txt`](llms-full.txt) (flat).
 
 ## Table of Contents
 

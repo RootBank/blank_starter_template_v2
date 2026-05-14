@@ -5,7 +5,7 @@
 ## Entry points
 
 - [CLAUDE.md](CLAUDE.md): Routing table and conventions for Claude (and similar agents).
-- [AGENT.md](AGENT.md): Vendor-neutral, self-contained entry point for non-Claude agents (Cursor, Codex, Aider, Continue, Zed). Includes the full doc-improvement prompt and the reusable provider-integration template inline.
+- [AGENTS.md](AGENTS.md): Vendor-neutral, self-contained entry point for non-Claude agents (Cursor, Codex, Aider, Continue, Zed). Includes the full doc-improvement prompt and the reusable provider-integration template inline.
 - [llms-full.txt](llms-full.txt): Flat concatenation of every doc below, with `## <name>` anchors per file.
 
 ## Docs
