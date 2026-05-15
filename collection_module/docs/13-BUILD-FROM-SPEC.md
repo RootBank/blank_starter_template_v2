@@ -273,7 +273,7 @@ Run the self-review command before shipping:
 /review-implementation
 ```
 
-This checks [docs/15-SELF-REVIEW.md](./15-SELF-REVIEW.md) criteria: critical blockers, major issues, minor issues, and enhancement suggestions.
+This checks [docs/14-SELF-REVIEW.md](./14-SELF-REVIEW.md) criteria: critical blockers, major issues, minor issues, and enhancement suggestions.
 
 ---
 
@@ -316,4 +316,10 @@ This checks [docs/15-SELF-REVIEW.md](./15-SELF-REVIEW.md) criteria: critical blo
 - [docs/SPEC-TEMPLATE.md](./SPEC-TEMPLATE.md) — spec input template
 - [docs/STRIPE-REFERENCE.md](./STRIPE-REFERENCE.md) — working reference implementation
 - [docs/03-PROVIDER-INTERFACE.md](./03-PROVIDER-INTERFACE.md) — contracts you must implement
-- [docs/15-SELF-REVIEW.md](./15-SELF-REVIEW.md) — self-review criteria
+- [docs/14-SELF-REVIEW.md](./14-SELF-REVIEW.md) — self-review criteria
+
+## You've understood this if…
+
+- You can name the six steps in the SOP without re-reading it.
+- You know when to use Path A (extract from docs) vs Path B (fill template manually).
+- You can identify the pre-flight check that must pass before scaffolding.

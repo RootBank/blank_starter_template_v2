@@ -154,15 +154,15 @@ Full docs live in `collection_module/docs/`:
 | `00-OVERVIEW.md` | Architecture, directory layout, data flow |
 | `02-ARCHITECTURE.md` | DI container, ServiceToken symbols, registration |
 | `03-PROVIDER-INTERFACE.md` | Provider contracts (Client, Service, Adapter) |
-| `06-CLIENTS.md` | SDK vs HTTP client patterns |
-| `10-TESTING.md` | Test patterns, mock factories, coverage |
-| `13-ERROR-HANDLING.md` | ModuleError, retryWithBackoff, timeouts |
-| `14-BUILD-FROM-SPEC.md` | Master SOP — end-to-end build workflow |
-| `15-SELF-REVIEW.md` | Quality checklist (Critical / Major / Minor) |
+| `05-CLIENTS.md` | SDK vs HTTP client patterns |
+| `09-TESTING.md` | Test patterns, mock factories, coverage |
+| `12-ERROR-HANDLING.md` | ModuleError, retryWithBackoff, timeouts |
+| `13-BUILD-FROM-SPEC.md` | Master SOP — end-to-end build workflow |
+| `14-SELF-REVIEW.md` | Quality checklist (Critical / Major / Minor) |
 | `STRIPE-REFERENCE.md` | Complete working reference implementation |
 | `SPEC-TEMPLATE.md` | Blank spec template (filled by `extract:spec`) |
 
-All docs: `01-GETTING-STARTED`, `04-SERVICES`, `05-CONTROLLERS`, `07-ADAPTERS`, `08-LIFECYCLE-HOOKS`, `09-WEBHOOKS`, `11-DEPLOYMENT`, `12-CONFIGURATION`.
+All docs: `01-GETTING-STARTED`, `03-PROVIDER-INTERFACE`, `04-CONTROLLERS`, `06-ADAPTERS`, `07-LIFECYCLE-HOOKS`, `08-WEBHOOKS`, `10-DEPLOYMENT`, `11-CONFIGURATION`.
 
 ---
 

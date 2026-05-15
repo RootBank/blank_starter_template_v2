@@ -9,7 +9,7 @@ allowed-tools: Read Grep Glob Bash Edit Write WebFetch Agent
 
 Build a collection module from a provider spec, API doc, PDF, or URL.
 
-> Full SOP: `collection_module/docs/14-BUILD-FROM-SPEC.md`
+> Full SOP: `collection_module/docs/13-BUILD-FROM-SPEC.md`
 > Reference implementation: `collection_module/docs/STRIPE-REFERENCE.md`
 
 ---

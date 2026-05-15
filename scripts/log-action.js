@@ -5,7 +5,8 @@
  * log-action.js
  *
  * Appends a structured action log entry to .logs/actions.jsonl.
- * Called by other scripts and AI commands to maintain an audit trail.
+ * Manual CLI: invoke from a terminal or wire into scripts that need an
+ * audit trail. Nothing in this repo currently calls it automatically.
  *
  * Usage:
  *   node scripts/log-action.js --action=<name> --reason=<why> [--status=<ok|error>] [--meta=<json>]

@@ -7,7 +7,7 @@
  * TODO: After scaffolding your provider, implement the render methods below.
  * Each method should return a complete HTML string for its view.
  *
- * See: docs/08-LIFECYCLE-HOOKS.md#rendering for patterns
+ * See: docs/07-LIFECYCLE-HOOKS.md#rendering for patterns
  * See: docs/STRIPE-REFERENCE.md#render-service for a complete working example
  */
 

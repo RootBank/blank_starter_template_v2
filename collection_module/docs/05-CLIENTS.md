@@ -129,4 +129,10 @@ container.register(
 - `code/clients/base-http-client.ts` — BaseHttpClient source (GET, POST, PUT, DELETE methods)
 - `code/interfaces/provider.interfaces.ts` — `PaymentProviderClient` contract
 - `docs/STRIPE-REFERENCE.md` — Full SDK client implementation
-- `docs/09-WEBHOOKS.md` — Signature verification patterns
+- `docs/08-WEBHOOKS.md` — Signature verification patterns
+
+## You've understood this if…
+
+- You can decide SDK vs HTTP for a new provider using the decision table.
+- You can name two responsibilities `BaseHttpClient` already handles for you.
+- You know where webhook signature verification lives and why it's on the client, not the service.

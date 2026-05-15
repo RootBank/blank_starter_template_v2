@@ -232,4 +232,10 @@ ConfigurationService must be registered before any service that depends on it. L
 
 - [00-OVERVIEW.md](./00-OVERVIEW.md) -- Architecture overview
 - [03-PROVIDER-INTERFACE.md](./03-PROVIDER-INTERFACE.md) -- Provider contracts
-- [14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) -- End-to-end implementation workflow
+- [13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) -- End-to-end implementation workflow
+
+## You've understood this if…
+
+- You can list every symbol on `ServiceToken` and what each is for.
+- You can explain when to use `SINGLETON` vs `TRANSIENT`.
+- You know how to register a service in `container.setup.ts` without reading the file.

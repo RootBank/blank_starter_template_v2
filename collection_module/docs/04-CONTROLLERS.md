@@ -115,7 +115,13 @@ describe('PaymentCompletedController', () => {
 
 ## Related
 
-- `docs/09-WEBHOOKS.md` — Webhook routing
+- `docs/08-WEBHOOKS.md` — Webhook routing
 - `docs/02-ARCHITECTURE.md` — DI container and ServiceToken
 - `docs/STRIPE-REFERENCE.md` — Full working example
 - `code/interfaces/provider.interfaces.ts` — Service contracts
+
+## You've understood this if…
+
+- You know why controllers register as `TRANSIENT` rather than `SINGLETON`.
+- You can name the size limit on a controller and why it exists.
+- You can sketch a one-event controller from memory.

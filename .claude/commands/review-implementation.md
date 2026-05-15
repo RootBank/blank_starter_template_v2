@@ -2,7 +2,7 @@
 
 Review a provider implementation against the self-review criteria.
 
-> Full criteria: [`collection_module/docs/15-SELF-REVIEW.md`](../../collection_module/docs/15-SELF-REVIEW.md)
+> Full criteria: [`collection_module/docs/14-SELF-REVIEW.md`](../../collection_module/docs/14-SELF-REVIEW.md)
 
 ---
 
@@ -21,7 +21,7 @@ Review a provider implementation against the self-review criteria.
    - `collection_module/code/lifecycle-hooks/payment.hooks.ts`
    - `collection_module/code/lifecycle-hooks/payment-method.hooks.ts`
 
-3. **Check every criterion** in `collection_module/docs/15-SELF-REVIEW.md` — Critical (C1–C8), Major (M1–M8), Minor (m1–m5).
+3. **Check every criterion** in `collection_module/docs/14-SELF-REVIEW.md` — Critical (C1–C8), Major (M1–M8), Minor (m1–m5).
 
 4. **Return a report** in this format:
 

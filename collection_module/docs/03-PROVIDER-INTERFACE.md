@@ -205,6 +205,49 @@ container.register(
 
 **Step 6: Update env.sample.ts** with provider-specific placeholder values.
 
+## Service implementation patterns
+
+Services contain business logic. Each provider ships with a `{Provider}Service` class registered under `ServiceToken.PROVIDER_SERVICE`. The shared infrastructure services (`RootService`, `RenderService`, `ConfigurationService`, `LogService`) are always present.
+
+### Conventions
+
+- Constructor-injected via DI — never instantiate services directly.
+- Use `LogService` only — no `console.log`.
+- Wrap external calls in `retryWithBackoff` from `utils/`.
+- Throw `ModuleError` (or a subclass from `utils/error-types.ts`) for business errors; see `12-ERROR-HANDLING.md`.
+- Keep services focused — one provider, one service class.
+- Map provider-specific errors to the closest `EnhancedModuleError` subclass at the service boundary.
+
+### Pattern
+
+```typescript
+import { LogService } from './log.service';
+import { ModuleError } from '../utils/error';
+import { retryWithBackoff } from '../utils/retry';
+import type { PaymentProviderService, CreateCustomerParams, ProviderCustomer } from '../interfaces/provider.interfaces';
+
+export class {Provider}Service implements PaymentProviderService {
+  constructor(
+    private readonly logService: LogService,
+    private readonly providerClient: {Provider}Client,
+  ) {}
+
+  async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {
+    this.logService.info('Creating customer', '{Provider}Service', params);
+    try {
+      return await retryWithBackoff(() => this.providerClient.sdk.customers.create(params));
+    } catch (err: any) {
+      throw err instanceof ModuleError
+        ? err
+        : new ModuleError('Failed to create customer', { cause: err?.message });
+    }
+  }
+  // ... other methods
+}
+```
+
+Register in `container.setup.ts` under `ServiceToken.PROVIDER_SERVICE`. The DI token is provider-agnostic — only the registration changes when swapping providers.
+
 ## Common Tasks
 
 ### Check which provider is registered
@@ -232,4 +275,10 @@ For providers that lack a TypeScript SDK, use `code/clients/base-http-client.ts`
 
 - [02-ARCHITECTURE.md](./02-ARCHITECTURE.md) -- DI container and registration
 - [STRIPE-REFERENCE.md](./STRIPE-REFERENCE.md) -- Working reference for all patterns
-- [14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) -- End-to-end spec-to-implementation workflow
+- [13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) -- End-to-end spec-to-implementation workflow
+
+## You've understood this if…
+
+- You can name the three provider interfaces and which file each lives in.
+- You can explain why services are wrapped in `retryWithBackoff` and what `ModuleError` adds over raw `Error`.
+- You can describe Step 4 (DI registration) without re-reading it.

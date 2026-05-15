@@ -151,3 +151,9 @@ Any other context the AI needs:
 - Sandbox vs production base URL differences
 - Rate limits or retry behaviour
 - Currency or amount formatting (cents vs units)
+
+## You've understood this if…
+
+- You can list the nine sections every spec must contain.
+- You know which section drives the status-mapping table in the adapter.
+- You can identify which sections, if left blank, will block scaffolding.

@@ -331,4 +331,10 @@ Fields used by the Stripe implementation in `code/env.ts` / `code/env.sample.ts`
 ## Related Docs
 
 - [03-PROVIDER-INTERFACE.md](./03-PROVIDER-INTERFACE.md) — contracts you must implement for a new provider
-- [14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) — end-to-end spec-to-implementation workflow
+- [13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) — end-to-end spec-to-implementation workflow
+
+## You've understood this if…
+
+- You can map every method on `StripeService` to a `PaymentProviderService` interface method.
+- You can name which file in Stripe's implementation handles webhook signature verification.
+- You can identify which Stripe events the reference subscribes to and which it ignores.

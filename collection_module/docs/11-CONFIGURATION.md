@@ -37,3 +37,9 @@ npm run setup -- --cm-key=cm_yourprovider_yourco --org-id=your-org-id
 
 - `code/env.sample.ts` — All required fields with descriptions
 - `code/services/config.service.ts` — Full implementation
+
+## You've understood this if…
+
+- You can name every provider-agnostic config field the template ships with.
+- You know which command bootstraps a new module's config.
+- You can explain why config fields are named `providerSecretKey` rather than `stripeSecretKey`.

@@ -73,3 +73,9 @@ describe('MyService', () => {
 
 - `__tests__/helpers/factories.ts` — Test data factories
 - `__tests__/test-helpers.ts` — Mock service factories
+
+## You've understood this if…
+
+- You can explain the implications of `resetMocks: true` for between-test state.
+- You know where shared test factories live and how to extend them.
+- You can name the coverage threshold and which directories it applies to.

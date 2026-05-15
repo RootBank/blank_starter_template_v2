@@ -101,5 +101,11 @@ X critical, Y major, Z minor. [Ready to ship / Not ready — fix critical + majo
 
 ## Related Docs
 
-- [docs/14-BUILD-FROM-SPEC.md](./14-BUILD-FROM-SPEC.md) — full implementation workflow
+- [docs/13-BUILD-FROM-SPEC.md](./13-BUILD-FROM-SPEC.md) — full implementation workflow
 - [docs/STRIPE-REFERENCE.md](./STRIPE-REFERENCE.md) — working reference for all patterns
+
+## You've understood this if…
+
+- You can name three Critical checks (C1–C8) without re-reading the doc.
+- You know the difference between a Major and a Minor finding.
+- You know which command to run to invoke the review.

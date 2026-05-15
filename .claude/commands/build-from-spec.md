@@ -2,7 +2,7 @@
 
 Build a collection module from a provider spec, API doc, PDF, or URL.
 
-> Full SOP: [`collection_module/docs/14-BUILD-FROM-SPEC.md`](../../collection_module/docs/14-BUILD-FROM-SPEC.md)
+> Full SOP: [`collection_module/docs/13-BUILD-FROM-SPEC.md`](../../collection_module/docs/13-BUILD-FROM-SPEC.md)
 
 ---
 
@@ -54,11 +54,11 @@ Show the user the CLI output.
 
 **Step 3 — Implement stubs**
 
-Read each generated file and implement the TODOs. See [collection_module/docs/14-BUILD-FROM-SPEC.md § Step 3](../../collection_module/docs/14-BUILD-FROM-SPEC.md#step-3--implement-the-stubs) for what to fill in each file. Use [collection_module/docs/STRIPE-REFERENCE.md](../../collection_module/docs/STRIPE-REFERENCE.md) as the pattern for every method.
+Read each generated file and implement the TODOs. See [collection_module/docs/13-BUILD-FROM-SPEC.md § Step 3](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-3--implement-the-stubs) for what to fill in each file. Use [collection_module/docs/STRIPE-REFERENCE.md](../../collection_module/docs/STRIPE-REFERENCE.md) as the pattern for every method.
 
 **Step 4 — Wire into module**
 
-Follow [collection_module/docs/14-BUILD-FROM-SPEC.md § Step 4](../../collection_module/docs/14-BUILD-FROM-SPEC.md#step-4--wire-into-the-module): DI container, webhooks, lifecycle hooks, env.sample.ts.
+Follow [collection_module/docs/13-BUILD-FROM-SPEC.md § Step 4](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-4--wire-into-the-module): DI container, webhooks, lifecycle hooks, env.sample.ts.
 
 **Step 5 — Verify**
 
