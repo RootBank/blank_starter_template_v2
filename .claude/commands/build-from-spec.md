@@ -2,68 +2,26 @@
 
 Build a collection module from a provider spec, API doc, PDF, or URL.
 
-> Full SOP: [`collection_module/docs/13-BUILD-FROM-SPEC.md`](../../collection_module/docs/13-BUILD-FROM-SPEC.md)
+> **Single source of truth for the steps:** [`collection_module/docs/13-BUILD-FROM-SPEC.md`](../../collection_module/docs/13-BUILD-FROM-SPEC.md). The [`build-from-spec` skill](../skills/build-from-spec/SKILL.md) carries the compact step skeleton. This command is just the entry point — don't restate the step detail here.
 
 ---
 
-## Quick steps
+## Entry
 
-**Step 0 — Pre-flight check**
+`$ARGUMENTS` is an optional URL or path to the provider's API docs / spec.
 
-Before writing any code, run these:
+1. **Pre-flight** (must pass before writing any code):
+   ```bash
+   cd collection_module && npm install
+   [ -f code/env.ts ] || cp code/env.sample.ts code/env.ts
+   cd collection_module && npm test && npm run build
+   ```
+2. **Follow the six steps in `13-BUILD-FROM-SPEC.md`:** get a spec (extract from `$ARGUMENTS` if given → `docs/<provider>-spec.md`) → scaffold (8 files) → implement stubs → wire in → verify → self-review.
+3. **Seed your todos** from the Status Checklist in `13-BUILD-FROM-SPEC.md` and tick them off as you go.
 
-```bash
-cd collection_module && npm install
-# Ensure code/env.ts exists (copy from env.sample.ts if missing)
-cd collection_module && npm test && npm run build
-```
+## The two gates that must pass before shipping
 
-If anything fails, fix it before proceeding. Do NOT run `npm install` more than once unless it fails.
+- `npm run validate:provider` — deterministic self-review (auto-detects the provider).
+- `/review-implementation` — fresh-context semantic review; confirms fixes with you before applying them.
 
-**Step 1 — Get a spec**
-
-If the user provided a URL or PDF, **always run extract:spec** — it does NOT require an API key. It works in passthrough mode without one.
-
-```bash
-cd collection_module && npm run extract:spec -- --input=<url-or-path> --output=docs/provider-spec.md
-```
-
-If the user already has a filled `docs/SPEC-TEMPLATE.md`, skip to Step 2.
-
-**Step 2 — Scaffold**
-
-**IMPORTANT**: Always run the scaffold command. Do not write provider files manually unless the scaffold fails.
-
-```bash
-cd collection_module && npm run scaffold:provider -- --from-spec=docs/provider-spec.md --reason="<why>"
-```
-
-Or with explicit flags if the spec extraction didn't capture everything:
-
-```bash
-cd collection_module && npm run scaffold:provider -- \
-  --provider=<Name> \
-  --api-type=<sdk|http> \
-  --base-url=<url> \
-  --auth-header=<header> \
-  --webhook-header=<header> \
-  --reason="<why>"
-```
-
-Show the user the CLI output.
-
-**Step 3 — Implement stubs**
-
-Read each generated file and implement the TODOs. See [collection_module/docs/13-BUILD-FROM-SPEC.md § Step 3](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-3--implement-the-stubs) for what to fill in each file. Use [collection_module/docs/STRIPE-REFERENCE.md](../../collection_module/docs/STRIPE-REFERENCE.md) as the pattern for every method.
-
-**Step 4 — Wire into module**
-
-Follow [collection_module/docs/13-BUILD-FROM-SPEC.md § Step 4](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-4--wire-into-the-module): DI container, webhooks, lifecycle hooks, env.sample.ts.
-
-**Step 5 — Verify**
-
-```bash
-cd collection_module && npm test
-```
-
-Fix failures. Then run `/review-implementation`.
+Show the user the scaffold and gate output as you go.

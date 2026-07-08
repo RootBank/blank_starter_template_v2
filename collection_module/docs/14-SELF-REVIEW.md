@@ -1,16 +1,21 @@
 # Self-Review Criteria
 
-> Run this via `/review-implementation` after completing a new provider. Fix all Critical and Major items before shipping.
+> Run this via `/review-implementation` after completing a new provider. Critical and Major items should be fixed before shipping — but confirm fixes with a human first (see Report format).
 
 ## How to use
 
-After implementing a provider, ask Claude/Cursor/Copilot:
+Review runs as a two-stage gate:
+
+1. **Deterministic (mechanized).** `npm run validate:provider` hard-fails the pattern-checkable criteria; `npm test` covers C7. These run first and don't need a model.
+2. **Semantic (fresh context).** A read-only reviewer with no implementation history checks the criteria that need judgement — hook wiring, and the spec-fidelity check (S1). Running it fresh avoids the bias of the context that wrote the code ratifying its own work.
 
 ```
 /review-implementation
 ```
 
-The AI reads this document and checks each criterion against the current codebase. It returns a report grouped by severity, with specific file references and suggested fixes for any failures.
+The command orchestrates both stages, consolidates one report grouped by severity with file references, and **confirms with you before applying any fix**.
+
+**Legend:** ⚙ = mechanized by `npm run validate:provider` (deterministic, exit-code). 🔎 = semantic, checked by the fresh-context reviewer. The ⚙ checks are: C1–C6, C8, M1, M3, M8, m4.
 
 ---
 
@@ -28,6 +33,7 @@ These are blockers. Code will not work correctly without them.
 | C6 | Event constants use real names (not placeholders) | Check `code/interfaces/{provider}-events.ts` — no `provider.payment.completed` format unless that's the real event |
 | C7 | All tests pass | `npm test` returns exit 0 |
 | C8 | Config keys added to `env.sample.ts` | Grep: `PROVIDER_SECRET_KEY` in env.sample.ts |
+| S1 🔎 | `statusMap` and events match the filled spec | Reviewer compares the adapter `statusMap` keys and `PROVIDER_EVENTS` values against `docs/<provider>-spec.md` § Status Mapping / § Webhook Events — nothing in the spec left unhandled, nothing handled that isn't in the spec. Catches a `pending → Successful` mis-map that C5/C6 (presence-only) can't. |
 
 ---
 
@@ -96,6 +102,8 @@ When Claude runs this review, it returns:
 ### Summary
 X critical, Y major, Z minor. [Ready to ship / Not ready — fix critical + major first]
 ```
+
+After presenting the report, **confirm with the user before applying fixes** — list the Critical and Major items and ask which to fix rather than auto-editing. Several findings (a status mapping, an event choice) are judgement calls a human should sign off on for a payments integration. Re-run `npm run validate:provider` after fixing.
 
 ---
 

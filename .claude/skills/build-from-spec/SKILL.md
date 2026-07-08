@@ -31,7 +31,7 @@ If any of these fail, fix the issue before proceeding to Step 1.
 If the user provided a URL, PDF, or OpenAPI file, **always run extract:spec** — it does NOT require an API key. Without `ANTHROPIC_API_KEY` it runs in passthrough mode, outputting the template with raw source content appended for you to fill in. This is the expected workflow.
 
 ```bash
-cd collection_module && npm run extract:spec -- --input=$ARGUMENTS --output=docs/provider-spec.md
+cd collection_module && npm run extract:spec -- --input=$ARGUMENTS --output=docs/<provider>-spec.md
 ```
 
 If the user already has a filled `docs/SPEC-TEMPLATE.md`, skip to Step 2.
@@ -50,7 +50,7 @@ If the user provided raw API documentation (pasted text, a webpage), read it and
 ## Step 2 — Scaffold the provider
 
 ```bash
-cd collection_module && npm run scaffold:provider -- --from-spec=docs/provider-spec.md --reason="<why>"
+cd collection_module && npm run scaffold:provider -- --from-spec=docs/<provider>-spec.md --reason="<why>"
 ```
 
 Or with explicit flags:
@@ -65,9 +65,9 @@ cd collection_module && npm run scaffold:provider -- \
   --reason="<why>"
 ```
 
-**IMPORTANT: Always run the scaffold script.** Do not manually create provider files from scratch.
-The scaffold generates consistent boilerplate with correct imports, DI tokens, and TODO markers.
-Only write files from scratch if the scaffold fails or produces incorrect output.
+Run the scaffold script rather than writing provider files by hand — it generates consistent
+boilerplate with correct imports, DI tokens, and TODO markers. Only write files from scratch if
+the scaffold fails or produces incorrect output.
 
 Show the user the CLI output. **8 files** should be created:
 - `code/clients/{provider}-client.ts`
@@ -81,98 +81,36 @@ Show the user the CLI output. **8 files** should be created:
 
 ## Step 3 — Implement stubs
 
-Read each generated file and implement the `// TODO` sections. Use `docs/STRIPE-REFERENCE.md` as the pattern for every method.
+Read each generated file and implement the `// TODO` sections, using `docs/STRIPE-REFERENCE.md` as the pattern for every method. Full method-by-method detail, the `statusMap` shape, and the events snippet are in [`13-BUILD-FROM-SPEC.md` § Step 3](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-3--implement-the-stubs) — the single source of truth. Don't restate them here.
 
-**Rules for all implementations:**
-- Wrap all API calls in `retryWithBackoff()`
-- Log at the start of every method: `this.logService.info('Creating customer', 'ProviderService', params)`
-- Throw `ModuleError` on failures, not raw errors
-- Use `LogService` only — no `console.log`
-- **DI resolution only in hooks**: Never import provider classes directly in lifecycle hooks. Use `container.resolve(ServiceToken.PROVIDER_SERVICE)` and type as `PaymentProviderService` interface.
-- **File reading rule**: If you have already explored the codebase via agent exploration (Glob, Grep, Read), trust the output. Do not re-read files you have already read in this session unless the file has been modified since you last read it.
+Core rules (these hold everywhere):
+- Wrap API calls in `retryWithBackoff()`.
+- Log at the start of each method via `LogService` — no `console.log`.
+- Throw a `ModuleError`, not a raw `Error`.
+- Resolve services in hooks via `container.resolve(ServiceToken.PROVIDER_SERVICE)` typed as `PaymentProviderService` — never import provider classes into hooks.
 
-### Service methods to implement
-
-| Method | What to implement |
-|---|---|
-| `createCustomer` | POST to provider's customer endpoint |
-| `createPaymentIntent` | POST to payment/charge endpoint |
-| `attachPaymentMethod` | Attach method to customer + set as default |
-| `cancelSubscription` | DELETE/cancel subscription |
-
-### Adapter — fill `statusMap`
-
-Map provider payment statuses to Root's `PaymentStatus`:
-
-```typescript
-const statusMap: Record<string, string> = {
-  'provider_success_status': PaymentStatus.Successful,
-  'provider_pending_status': PaymentStatus.Pending,
-  'provider_failed_status':  PaymentStatus.Failed,
-  'provider_cancel_status':  PaymentStatus.Cancelled,
-};
-```
-
-### Events — replace placeholders with real event names
-
-```typescript
-export const PROVIDER_EVENTS = {
-  PAYMENT_COMPLETED: 'actual.event.name',
-  PAYMENT_FAILED:    'actual.event.failed',
-} as const;
-```
+**Optional — fan out with subagents.** The four generated files are independent, so you *may* implement them in parallel with one read-only subagent per file (`code/clients/…`, `code/services/…`, `code/adapters/…`, `code/interfaces/…`), each given the spec + its Stripe-reference section. Keep it sequential for a small provider. Do **not** parallelize Step 4 — those files are shared and parallel writes conflict.
 
 ## Step 4 — Wire into the module
 
-Four files to update. Read each one before editing — the Stripe entries show the exact pattern.
-
-### 4a. DI container (`code/core/container.setup.ts`)
-
-Register client and service under provider-agnostic tokens:
-
-```typescript
-container.register(ServiceToken.PROVIDER_CLIENT, {
-  useClass: MyProviderClient,
-  lifetime: Lifetime.SINGLETON,
-});
-container.register(ServiceToken.PROVIDER_SERVICE, {
-  useClass: MyProviderService,
-  lifetime: Lifetime.SINGLETON,
-});
-```
-
-### 4b. Webhooks (`code/webhook-hooks.ts`)
-
-1. Verify signature using `providerClient.verifyWebhookSignature()`
-2. Parse event body
-3. Add `case` entries for each event in `PROVIDER_EVENTS`
-
-### 4c. Lifecycle hooks (`code/lifecycle-hooks/`)
-
-| Hook file | What to call |
-|---|---|
-| `policy.hooks.ts` → `afterPolicyIssued` | `providerService.createCustomer(...)` then update `policy.app_data` |
-| `policy.hooks.ts` → `afterPolicyCancelled` | `providerService.cancelSubscription(...)` if applicable |
-| `payment-method.hooks.ts` → `afterPolicyPaymentMethodAssigned` | `providerService.attachPaymentMethod(...)` |
-| `payment.hooks.ts` → `afterPaymentCreated` | `providerService.createPaymentIntent(...)` |
-
-### 4d. Config (`code/env.sample.ts`)
-
-Add the provider's config keys (PROVIDER_SECRET_KEY_LIVE, PROVIDER_SECRET_KEY_TEST, PROVIDER_WEBHOOK_SIGNING_SECRET_LIVE, PROVIDER_WEBHOOK_SIGNING_SECRET_TEST, etc.)
+Update the DI container, webhooks, lifecycle hooks, and config — sequentially (shared files). The exact snippets and the hook-to-method table live in [`13-BUILD-FROM-SPEC.md` § Step 4](../../collection_module/docs/13-BUILD-FROM-SPEC.md#step-4--wire-into-the-module). Read each target file first; the Stripe entries show the pattern.
 
 ## Step 5 — Verify
 
 ```bash
-cd collection_module && npm test
+cd collection_module && npm run validate:provider   # deterministic gate — mechanized self-review
+cd collection_module && npm test                    # bounded loop: run → fix → re-run (see 13 § Step 5)
 ```
 
-Fix all failures. Then run `/review-implementation` for self-review.
+Fix failures, then run `/review-implementation` for the fresh-context semantic review.
 
 ## Status Checklist
 
+Seed your todos from this list at the start of the build and tick them off as you go (this is the canonical copy — [`13-BUILD-FROM-SPEC.md`](../../collection_module/docs/13-BUILD-FROM-SPEC.md#status-checklist) mirrors it):
+
 ```
-[ ] Spec filled (docs/SPEC-TEMPLATE.md or extracted)
-[ ] Scaffold run — 7 files created
+[ ] Spec filled (docs/<provider>-spec.md or docs/SPEC-TEMPLATE.md)
+[ ] Scaffold run — 8 files created
 [ ] Service methods implemented (no TODO stubs remaining)
 [ ] Adapter statusMap filled
 [ ] Events constants use real event names
@@ -180,6 +118,7 @@ Fix all failures. Then run `/review-implementation` for self-review.
 [ ] Webhooks: signature verification + event routing
 [ ] Lifecycle hooks: policy, payment, payment-method
 [ ] Config placeholders added to env.sample.ts
+[ ] Provider gate passes (npm run validate:provider)
 [ ] All tests pass (npm test)
 [ ] Self-review complete (/review-implementation)
 ```

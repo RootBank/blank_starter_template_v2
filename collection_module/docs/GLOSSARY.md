@@ -10,6 +10,8 @@
 
 **`BaseHttpClient`** — Shared HTTP client (`code/clients/base-http-client.ts`) for providers that lack a TypeScript SDK. Provides typed methods, retry, and timeout. See `05-CLIENTS.md`.
 
+**`billingSettings`** — Block in `root.config.json` that configures scheduled-payment behaviour: `batching` (submission timing, batch size, lead time, API-vs-file provider) and an optional `retry` policy. See `17-SCHEDULED-PAYMENTS.md`.
+
 ## C
 
 **Collection Module** — The deployable unit produced by this template. A collection module integrates one payment provider with Root Platform, exposing lifecycle hooks and webhooks. See `00-OVERVIEW.md`.
@@ -59,6 +61,10 @@
 ## S
 
 **Scaffolder** — The CLI (`npm run scaffold:provider`) that generates client/service/adapter/hook stubs for a new provider from flags or a spec. See `13-BUILD-FROM-SPEC.md`.
+
+**Scheduled Payment** — A forecast of a future policy payment, created by returning a `schedule_payment` action from a lifecycle hook. Root converts it into a `pending` payment on/before the due date, then submits it. See `17-SCHEDULED-PAYMENTS.md`.
+
+**`submitPaymentsFunction`** — Name (in `billingSettings.batching`) of the exported hook Root calls to submit a batch of pending payments for an API-based provider. Required when `batching.enabled` is `true`; file-based providers leave it unset. See `17-SCHEDULED-PAYMENTS.md`.
 
 **Service Lifetime** — `SINGLETON` (one instance per container) or `TRANSIENT` (new instance per resolve). Defined in `code/core/container.ts`. See `02-ARCHITECTURE.md`.
 
