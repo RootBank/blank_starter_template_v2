@@ -27,6 +27,7 @@
 - [14-SELF-REVIEW.md](collection_module/docs/14-SELF-REVIEW.md): Critical/Major/Minor self-review criteria.
 - [15-PROVIDER-PATTERNS.md](collection_module/docs/15-PROVIDER-PATTERNS.md): SDK vs HTTP side-by-side reference (client, auth, signing, pagination, webhooks, errors, retry).
 - [16-WHEN-TO-DEVIATE.md](collection_module/docs/16-WHEN-TO-DEVIATE.md): When the template doesn't fit, and how to signal the deviation.
+- [17-SCHEDULED-PAYMENTS.md](collection_module/docs/17-SCHEDULED-PAYMENTS.md): Scheduling future policy payments — schedule/reschedule/unschedule actions, `billingSettings` config, the API-provider submission hook, lifecycle events.
 - [GLOSSARY.md](collection_module/docs/GLOSSARY.md): Template-specific and Root-specific terms.
 - [STRIPE-REFERENCE.md](collection_module/docs/STRIPE-REFERENCE.md): The complete working Stripe implementation.
 - [SPEC-TEMPLATE.md](collection_module/docs/SPEC-TEMPLATE.md): Fill-in-the-blanks spec template that drives the scaffolder.

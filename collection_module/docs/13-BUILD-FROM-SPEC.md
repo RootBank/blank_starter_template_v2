@@ -9,7 +9,7 @@
 | [Prerequisites](#prerequisites) | What you need before starting |
 | [Step 0 — Pre-flight setup](#step-0--pre-flight-setup) | Install deps, create env.ts, confirm tests pass |
 | [Step 1 — Prepare your spec](#step-1--prepare-your-spec) | Fill SPEC-TEMPLATE.md or run `extract:spec` |
-| [Step 2 — Scaffold the provider](#step-2--scaffold-the-provider) | Generate 7 files in one command |
+| [Step 2 — Scaffold the provider](#step-2--scaffold-the-provider) | Generate 8 files in one command |
 | [Step 3 — Implement the stubs](#step-3--implement-the-stubs) | Fill in the provider-specific logic |
 | [Step 4 — Wire into the module](#step-4--wire-into-the-module) | DI container, webhooks, lifecycle hooks, config |
 | [Step 5 — Test](#step-5--test) | Run tests and validate config |
@@ -55,13 +55,13 @@ You have two paths:
 
 ```bash
 # From a URL
-npm run extract:spec -- --input=https://docs.provider.com/api-reference --output=docs/my-provider-spec.md
+npm run extract:spec -- --input=https://docs.provider.com/api-reference --output=docs/<provider>-spec.md
 
 # From a PDF
-npm run extract:spec -- --input=./provider-api-docs.pdf --output=docs/my-provider-spec.md
+npm run extract:spec -- --input=./provider-api-docs.pdf --output=docs/<provider>-spec.md
 
 # From an OpenAPI file
-npm run extract:spec -- --input=./openapi.json --output=docs/my-provider-spec.md
+npm run extract:spec -- --input=./openapi.json --output=docs/<provider>-spec.md
 ```
 
 If `ANTHROPIC_API_KEY` is set, Claude fills the template automatically. Otherwise the script falls back to passthrough mode — it outputs the template with the raw source content appended so you can fill it in manually. You can also force passthrough with `--no-ai`. Review the output and fill in any gaps.
@@ -86,7 +86,7 @@ Open `docs/SPEC-TEMPLATE.md` and fill in all sections:
 ### Option A — From spec file
 
 ```bash
-npm run scaffold:provider -- --from-spec=docs/my-provider-spec.md --reason="Adding GoCardless for ZA direct debit"
+npm run scaffold:provider -- --from-spec=docs/<provider>-spec.md --reason="Adding GoCardless for ZA direct debit"
 ```
 
 The `--from-spec` flag reads your filled spec and auto-populates `--provider`, `--api-type`, `--base-url`, `--auth-header`, `--webhook-header`.
@@ -123,6 +123,7 @@ npm run scaffold:provider -- \
 | `__tests__/clients/{provider}-client.test.ts` | Client tests |
 | `__tests__/services/{provider}.service.test.ts` | Service tests |
 | `__tests__/adapters/{provider}-to-root-adapter.test.ts` | Adapter tests |
+| `__tests__/helpers/{provider}-factories.ts` | Mock factories for the provider's API response shapes |
 
 ---
 
@@ -250,14 +251,26 @@ See [STRIPE-REFERENCE.md § Config Fields](./STRIPE-REFERENCE.md#config-fields) 
 
 ## Step 5 — Test
 
+Run the deterministic provider gate first — it hard-fails the mechanizable self-review checks (DI registration, no leftover stubs, retry/error/logging discipline) before you spend time on the semantic review:
+
 ```bash
-# Run all tests
+npm run validate:provider   # auto-detects the provider; exits non-zero on any Critical/Major miss
+```
+
+Then run the test suite as a bounded loop rather than a single pass:
+
+```bash
 npm test
+```
 
-# Validate config shape
-npm run validate
+1. Run `npm test`, read the failures, fix them, re-run.
+2. Repeat until green, capping at ~3 iterations.
+3. If it's still red after that, stop and surface the remaining failures rather than churning — the cause is usually a wiring gap from Step 4, not a flaky test.
 
-# Lint
+Finally, config shape and lint:
+
+```bash
+npm run validate   # config shape
 npm run lint
 ```
 
@@ -280,8 +293,8 @@ This checks [docs/14-SELF-REVIEW.md](./14-SELF-REVIEW.md) criteria: critical blo
 ## Status Checklist
 
 ```
-[ ] Spec filled (docs/SPEC-TEMPLATE.md or extracted)
-[ ] Scaffold run — 7 files created
+[ ] Spec filled (docs/<provider>-spec.md or docs/SPEC-TEMPLATE.md)
+[ ] Scaffold run — 8 files created
 [ ] Service methods implemented (no TODO stubs remaining)
 [ ] Adapter statusMap filled
 [ ] Events constants use real event names
@@ -289,6 +302,7 @@ This checks [docs/14-SELF-REVIEW.md](./14-SELF-REVIEW.md) criteria: critical blo
 [ ] Webhooks: signature verification + event routing
 [ ] Lifecycle hooks: policy, payment, payment-method
 [ ] Config placeholders added to env.sample.ts
+[ ] Provider gate passes (npm run validate:provider)
 [ ] All tests pass (npm test)
 [ ] Config validates (npm run validate)
 [ ] Self-review complete (/review-implementation)

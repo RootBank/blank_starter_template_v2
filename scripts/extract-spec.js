@@ -27,47 +27,68 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-// ─── Arg parsing ─────────────────────────────────────────────────────────────
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
+const MAX_OUTPUT_TOKENS = 16000;
 
-const args = parseArgs(process.argv.slice(2));
+// Instructions live in the system prompt; the source doc + template go in the
+// user turn (keeps the fixed prefix stable and the volatile content separate).
+const SYSTEM_PROMPT = `You extract information from a payment provider's API documentation to fill a spec template.
 
-if (args.help) {
-  printHelp();
-  process.exit(0);
+Rules:
+- Fill every field in the template using information from the docs.
+- Replace example values (e.g. "e.g. GoCardless") with actual values from the docs.
+- For webhook events, list every event the payment module needs to handle (focus on payment success, payment failure, subscription/mandate events).
+- For status mapping, list every payment status the provider uses and map each to: successful, pending, failed, or cancelled.
+- For API endpoints, list only the endpoints needed for: create customer, get customer, create payment, attach payment method, cancel subscription.
+- If a field is not in the docs, leave the placeholder text and add "// NOT FOUND IN DOCS" after it. Never invent values.
+- Keep the exact Markdown structure of the template. Do not add sections that aren't in the template.
+- Output only the filled template — no preamble, no explanation.`;
+
+// ─── CLI entry point (only runs when invoked directly, not when required) ────
+
+if (require.main === module) {
+  const args = parseArgs(process.argv.slice(2));
+
+  if (args.help) {
+    printHelp();
+    process.exit(0);
+  }
+
+  if (!args.input) {
+    log('error', '--input is required (URL, PDF path, or OpenAPI file path)');
+    process.exit(1);
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY && !args['no-ai']) {
+    log('info', 'Running in passthrough mode (raw content + template for manual/AI review)');
+  }
+
+  const config = {
+    useAi: !args['no-ai'] && !!process.env.ANTHROPIC_API_KEY,
+    inputSource: args.input,
+    outputPath:
+      args.output || path.resolve(__dirname, '..', 'collection_module', 'docs', 'SPEC-EXTRACTED.md'),
+    isDryRun: !!args['dry-run'],
+  };
+
+  main(config).catch((err) => {
+    log('error', `extract-spec failed: ${err.message}`);
+    process.exit(1);
+  });
 }
-
-if (!args.input) {
-  log('error', '--input is required (URL, PDF path, or OpenAPI file path)');
-  process.exit(1);
-}
-
-const useAi = !args['no-ai'] && !!process.env.ANTHROPIC_API_KEY;
-
-if (!process.env.ANTHROPIC_API_KEY && !args['no-ai']) {
-  log('info', 'Running in passthrough mode (raw content + template for manual/AI review)');
-}
-
-const inputSource = args.input;
-const outputPath = args.output || path.resolve(__dirname, '..', 'collection_module', 'docs', 'SPEC-EXTRACTED.md');
-const isDryRun = !!args['dry-run'];
-
-const ROOT = path.resolve(__dirname, '..', 'collection_module');
-const SPEC_TEMPLATE_PATH = path.join(ROOT, 'docs', 'SPEC-TEMPLATE.md');
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-main().catch((err) => {
-  log('error', `extract-spec failed: ${err.message}`);
-  process.exit(1);
-});
+async function main(config) {
+  const { useAi, inputSource, outputPath, isDryRun } = config;
+  const ROOT = path.resolve(__dirname, '..', 'collection_module');
+  const SPEC_TEMPLATE_PATH = path.join(ROOT, 'docs', 'SPEC-TEMPLATE.md');
 
-async function main() {
   log('info', 'extract-spec start', { input: inputSource, output: outputPath, dryRun: isDryRun });
 
   // 1. Read the spec template
   if (!fs.existsSync(SPEC_TEMPLATE_PATH)) {
-    log('error', `SPEC-TEMPLATE.md not found at ${SPEC_TEMPLATE_PATH}`);
-    process.exit(1);
+    throw new Error(`SPEC-TEMPLATE.md not found at ${SPEC_TEMPLATE_PATH}`);
   }
   const specTemplate = fs.readFileSync(SPEC_TEMPLATE_PATH, 'utf8');
 
@@ -81,6 +102,16 @@ async function main() {
   if (useAi) {
     log('info', 'Calling Claude to fill spec template...');
     filledSpec = await fillSpecWithClaude(rawContent, specTemplate, inputSource);
+
+    // Two-layer validation of the AI-filled spec (see validateFilledSpec).
+    const { errors, warnings } = validateFilledSpec(filledSpec);
+    for (const w of warnings) log('warn', w);
+    if (errors.length) {
+      throw new Error(
+        `Extracted spec is missing fields the scaffolder requires:\n  - ${errors.join('\n  - ')}\n` +
+          'Fix the source doc or fill these in manually before scaffolding.',
+      );
+    }
   } else {
     log('info', 'Passthrough mode — embedding raw content alongside template for manual review');
     filledSpec = buildPassthroughSpec(rawContent, specTemplate, inputSource);
@@ -278,60 +309,96 @@ ${content}
 async function fillSpecWithClaude(rawContent, specTemplate, sourceLabel) {
   const Anthropic = requireAnthropic();
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
 
-  // Truncate very long docs to avoid context limits (keep first 80k chars)
-  const MAX_CONTENT = 80000;
-  const truncated = rawContent.length > MAX_CONTENT;
-  const content = truncated ? rawContent.slice(0, MAX_CONTENT) : rawContent;
-  if (truncated) {
-    log('warn', `Content truncated from ${rawContent.length} to ${MAX_CONTENT} chars for API call`);
+  const userContent =
+    `SOURCE: ${sourceLabel}\n\n` +
+    `PROVIDER API DOCUMENTATION:\n<docs>\n${rawContent}\n</docs>\n\n` +
+    `SPEC TEMPLATE TO FILL:\n<template>\n${specTemplate}\n</template>\n\n` +
+    `Return the complete filled SPEC-TEMPLATE.md content now:`;
+  const messages = [{ role: 'user', content: userContent }];
+
+  // Size guard — fail loud instead of silently truncating the source (the old
+  // behaviour sliced at 80k chars and the model filled the missing half blind).
+  await assertWithinBudget(client, model, SYSTEM_PROMPT, messages);
+
+  let message;
+  try {
+    message = await client.messages.create({
+      model,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages,
+    });
+  } catch (err) {
+    throw toFriendlyApiError(Anthropic, err);
   }
 
-  const prompt = `You are extracting information from a payment provider's API documentation to fill a spec template.
+  if (message.stop_reason === 'max_tokens') {
+    throw new Error(
+      `Spec extraction hit the ${MAX_OUTPUT_TOKENS}-token output cap (stop_reason=max_tokens) — ` +
+        'the filled spec would be truncated. Point --input at a narrower section of the docs, ' +
+        'or raise MAX_OUTPUT_TOKENS.',
+    );
+  }
 
-SOURCE: ${sourceLabel}
-
-PROVIDER API DOCUMENTATION:
-<docs>
-${content}
-</docs>
-
-SPEC TEMPLATE TO FILL:
-<template>
-${specTemplate}
-</template>
-
-Instructions:
-- Fill every field in the template using information from the docs
-- Replace example values (e.g. "e.g. GoCardless") with actual values from the docs
-- For webhook events, list every event the payment module needs to handle (focus on payment success, payment failure, subscription/mandate events)
-- For status mapping, list every payment status the provider uses and map to: successful, pending, failed, or cancelled
-- For API endpoints, list only the endpoints needed for: create customer, get customer, create payment, attach payment method, cancel subscription
-- If a field is not in the docs, leave the placeholder text and add "// NOT FOUND IN DOCS" after it
-- Keep the exact Markdown structure of the template
-- Do not add sections that aren't in the template
-- Output only the filled template — no preamble, no explanation
-
-Return the complete filled SPEC-TEMPLATE.md content now:`;
-
-  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
-  const message = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const text = message.content
+  return message.content
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
     .join('');
+}
 
-  return text;
+// Count the assembled prompt and refuse to send if it can't fit the model's
+// context window alongside the reserved output budget.
+async function assertWithinBudget(client, model, system, messages) {
+  let contextWindow = 200000; // conservative fallback if the lookup fails
+  try {
+    const info = await client.models.retrieve(model);
+    if (info && info.max_input_tokens) contextWindow = info.max_input_tokens;
+  } catch (err) {
+    log('warn', `Could not look up context window for ${model} (${err.message}); using ${contextWindow}`);
+  }
+
+  const margin = 2000;
+  const budget = contextWindow - MAX_OUTPUT_TOKENS - margin;
+
+  let inputTokens;
+  try {
+    const tc = await client.messages.countTokens({ model, system, messages });
+    inputTokens = tc.input_tokens;
+  } catch (err) {
+    log('warn', `Token count unavailable (${err.message}); skipping size guard`);
+    return;
+  }
+
+  log('info', `Prompt size: ${inputTokens} input tokens (budget ${budget} for ${model})`);
+  if (inputTokens > budget) {
+    throw new Error(
+      `Source too large: ${inputTokens} input tokens exceeds the ${budget}-token budget for ${model}. ` +
+        'Split the docs or point --input at a narrower section. ' +
+        '(This used to be silently truncated to 80k characters.)',
+    );
+  }
+}
+
+function toFriendlyApiError(Anthropic, err) {
+  const reqId = err && err.request_id ? ` (request_id: ${err.request_id})` : '';
+  if (Anthropic.RateLimitError && err instanceof Anthropic.RateLimitError) {
+    return new Error(`Rate limited by the Anthropic API${reqId}. Retry later.`);
+  }
+  if (Anthropic.AuthenticationError && err instanceof Anthropic.AuthenticationError) {
+    return new Error(`ANTHROPIC_API_KEY was rejected${reqId}. Check the key.`);
+  }
+  if (Anthropic.APIStatusError && err instanceof Anthropic.APIStatusError) {
+    return new Error(`Anthropic API error ${err.status}: ${err.message}${reqId}`);
+  }
+  return err;
 }
 
 function requireAnthropic() {
   try {
-    return require('@anthropic-ai/sdk');
+    const mod = require('@anthropic-ai/sdk');
+    return mod.default || mod;
   } catch {
     throw new Error(
       '@anthropic-ai/sdk is not installed.\n' +
@@ -407,3 +474,67 @@ Notes:
   - Review the extracted spec before running scaffold:provider.
 `);
 }
+
+// ─── Spec validation (pure — exported for tests) ──────────────────────────────
+
+/**
+ * Validate an AI-filled spec against what the scaffolder needs.
+ *  - errors:   missing/placeholder values the scaffolder regex-parses. Hard fail.
+ *  - warnings: agent-facing sections left at their template defaults. Soft.
+ *
+ * @param {string} text  The filled SPEC-TEMPLATE.md content.
+ * @returns {{ errors: string[], warnings: string[] }}
+ */
+function validateFilledSpec(text) {
+  const errors = [];
+  const warnings = [];
+
+  // The 5 scaffolder-critical lines (see scaffold-provider.js readSpecFile()).
+  const name = labelValue(text, 'Provider name:');
+  if (isPlaceholder(name)) errors.push('Provider name is missing or still a placeholder');
+
+  const sdk = labelValue(text, 'SDK \\(npm package\\):');
+  const url = labelValue(text, 'API docs URL:');
+  const sdkReal = !isPlaceholder(sdk) && !/^none/i.test(sdk || '');
+  const urlReal = !isPlaceholder(url);
+  if (!sdkReal && !urlReal) {
+    errors.push('API type unresolvable — need a real "SDK (npm package):" or "API docs URL:"');
+  }
+
+  const authHeader = labelValue(text, 'Header name:');
+  if (isPlaceholder(authHeader)) errors.push('Auth "Header name:" is missing or still a placeholder');
+
+  const sigHeader = labelValue(text, 'Signature header:');
+  if (isPlaceholder(sigHeader)) errors.push('Webhook "Signature header:" is missing or still a placeholder');
+
+  // Agent-facing sections — warn if they still carry the template defaults.
+  if (/payment\.completed[\s\S]*payment\.failed[\s\S]*mandate\.cancelled/.test(text)) {
+    warnings.push('Webhook Events table still shows the template defaults — confirm real event names');
+  }
+  if (/paid_out[\s\S]*pending_submission/.test(text)) {
+    warnings.push('Status mapping still shows the template defaults — confirm real provider statuses');
+  }
+  if (/"id":\s*"CU123"/.test(text) || /"id":\s*"PM123"/.test(text)) {
+    warnings.push('Data Shapes still show the template example objects — replace with real shapes');
+  }
+
+  return { errors, warnings };
+}
+
+function labelValue(text, label) {
+  // Capture only the remainder of the SAME line — [ \t]* (not \s*) so the match
+  // can't span a newline and grab the next line's text when the value is blank.
+  const m = text.match(new RegExp(label + '[ \\t]*(.*)'));
+  return m ? m[1].trim() : null;
+}
+
+function isPlaceholder(value) {
+  if (!value) return true;
+  const v = value.trim();
+  if (v === '') return true;
+  if (/^e\.g\./i.test(v)) return true; // unchanged template hint
+  if (/NOT FOUND IN DOCS/i.test(v)) return true;
+  return false;
+}
+
+module.exports = { validateFilledSpec };

@@ -74,7 +74,7 @@ Uses Claude to fill the template if `ANTHROPIC_API_KEY` is set. Without it, fall
 npm run scaffold:provider -- --from-spec=docs/myprovider-spec.md --reason="<why>"
 ```
 
-Generates 7 files (client, service, adapter, events + tests) and prints the exact code to paste into `container.setup.ts` and `webhook-hooks.ts`.
+Generates 8 files (client, service, adapter, events + their tests and mock factories) and prints the exact code to paste into `container.setup.ts` and `webhook-hooks.ts`.
 
 ### 3. Implement stubs
 
@@ -159,10 +159,11 @@ Full docs live in `collection_module/docs/`:
 | `12-ERROR-HANDLING.md` | ModuleError, retryWithBackoff, timeouts |
 | `13-BUILD-FROM-SPEC.md` | Master SOP — end-to-end build workflow |
 | `14-SELF-REVIEW.md` | Quality checklist (Critical / Major / Minor) |
+| `17-SCHEDULED-PAYMENTS.md` | Scheduling future payments, submission hook, events |
 | `STRIPE-REFERENCE.md` | Complete working reference implementation |
 | `SPEC-TEMPLATE.md` | Blank spec template (filled by `extract:spec`) |
 
-All docs: `01-GETTING-STARTED`, `03-PROVIDER-INTERFACE`, `04-CONTROLLERS`, `06-ADAPTERS`, `07-LIFECYCLE-HOOKS`, `08-WEBHOOKS`, `10-DEPLOYMENT`, `11-CONFIGURATION`.
+All docs: `01-GETTING-STARTED`, `03-PROVIDER-INTERFACE`, `04-CONTROLLERS`, `06-ADAPTERS`, `07-LIFECYCLE-HOOKS`, `08-WEBHOOKS`, `10-DEPLOYMENT`, `11-CONFIGURATION`, `15-PROVIDER-PATTERNS`, `16-WHEN-TO-DEVIATE`, `17-SCHEDULED-PAYMENTS`.
 
 ---
 

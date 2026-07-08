@@ -35,6 +35,7 @@ const ORDER = [
   path.join(DOCS, '14-SELF-REVIEW.md'),
   path.join(DOCS, '15-PROVIDER-PATTERNS.md'),
   path.join(DOCS, '16-WHEN-TO-DEVIATE.md'),
+  path.join(DOCS, '17-SCHEDULED-PAYMENTS.md'),
   path.join(DOCS, 'GLOSSARY.md'),
   path.join(DOCS, 'STRIPE-REFERENCE.md'),
   path.join(DOCS, 'SPEC-TEMPLATE.md'),

@@ -7,7 +7,7 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.27.0",
+    "@anthropic-ai/sdk": "^0.106.0",
     "@rootplatform/node-sdk": "^0.0.7",
     "joi": "^17.13.3",
     "moment-timezone": "0.5.40",
@@ -56,6 +56,7 @@
     "prepush": "npm run lint && npm run test && npm run build",
     "setup": "node ../scripts/setup.js",
     "scaffold:provider": "node ../scripts/scaffold-provider.js",
+    "validate:provider": "node ../scripts/validate-provider.js",
     "extract:spec": "node ../scripts/extract-spec.js",
     "log:action": "node ../scripts/log-action.js",
     "build:llms": "node ../scripts/build-llms-full.js",

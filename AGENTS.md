@@ -29,7 +29,8 @@ These are non-negotiable. Violating them silently breaks the provider abstractio
 - **Wrap external calls in `retryWithBackoff`.** From `code/utils/retry.ts`.
 - **Map provider errors at the service boundary.** Throw an `EnhancedModuleError` subclass — see `collection_module/docs/12-ERROR-HANDLING.md`.
 - **Lifecycle hooks must be idempotent.** Root may retry. See `collection_module/docs/07-LIFECYCLE-HOOKS.md`.
-- **Doc numbering is gap-tolerant.** Numbered docs run 00–16. Renumbering breaks every cross-reference — don't do it casually.
+- **Scheduled payments are driven from hooks, not a billing API.** Return `schedule_payment` / `reschedule_payment` / `unschedule_payment` actions; configure `billingSettings` in `root.config.json`. See `collection_module/docs/17-SCHEDULED-PAYMENTS.md`.
+- **Doc numbering is gap-tolerant.** Numbered docs run 00–17. Renumbering breaks every cross-reference — don't do it casually.
 - **Do not invent semantics.** If the codebase or spec is ambiguous, leave a `TODO(human):` with a specific question instead of guessing. This applies especially to webhook signature schemes and error mappings.
 
 ## Doc-improvement prompt (verbatim)
