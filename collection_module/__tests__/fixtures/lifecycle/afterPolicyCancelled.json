@@ -1,0 +1,16 @@
+{
+  "name": "afterPolicyCancelled",
+  "hook": "afterPolicyCancelled",
+  "description": "A cancelled policy that has a provider subscription to tear down.",
+  "notes": "docs/07-LIFECYCLE-HOOKS.md requires cancellation to succeed even when the provider has no record. Delete provider_subscription_id from app_data and re-run to check that guard.",
+  "args": {
+    "policy": {
+      "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+      "status": "cancelled",
+      "app_data": {
+        "provider_customer_id": "cus_sim_0001",
+        "provider_subscription_id": "sub_sim_0001"
+      }
+    }
+  }
+}

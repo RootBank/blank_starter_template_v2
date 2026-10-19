@@ -57,6 +57,8 @@
     "setup": "node ../scripts/setup.js",
     "scaffold:provider": "node ../scripts/scaffold-provider.js",
     "validate:provider": "node ../scripts/validate-provider.js",
+    "sim:webhook": "node ../scripts/simulate.js webhook",
+    "sim:lifecycle": "node ../scripts/simulate.js lifecycle",
     "extract:spec": "node ../scripts/extract-spec.js",
     "log:action": "node ../scripts/log-action.js",
     "build:llms": "node ../scripts/build-llms-full.js",

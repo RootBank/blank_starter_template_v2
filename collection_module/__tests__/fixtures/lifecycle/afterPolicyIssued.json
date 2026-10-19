@@ -1,0 +1,20 @@
+{
+  "name": "afterPolicyIssued",
+  "hook": "afterPolicyIssued",
+  "description": "A freshly issued policy with no provider IDs on app_data yet — the first-run case the hook must handle.",
+  "notes": "Fields are limited to the ones code/lifecycle-hooks/ and docs/07-LIFECYCLE-HOOKS.md actually read: policy_id, policyholder.email, policyholder.first_name, app_data. TODO(human): add any further Root policy fields your provider needs before relying on this fixture.",
+  "args": {
+    "policy": {
+      "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+      "policy_number": "SIM-0001",
+      "status": "active",
+      "policyholder": {
+        "id": "ph_sim_0001",
+        "email": "simulated.policyholder@example.com",
+        "first_name": "Sim",
+        "last_name": "Policyholder"
+      },
+      "app_data": {}
+    }
+  }
+}

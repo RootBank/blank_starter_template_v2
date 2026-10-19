@@ -1,0 +1,52 @@
+{
+  "name": "shape-wrapped-batch",
+  "event": "payments.wrapped-batch",
+  "shape": "wrapped-batch",
+  "description": "Format demonstration: one request carries several events under a wrapper key, so the handler must loop rather than switch once. GoCardless has this form ({ events: [...] }).",
+  "notes": "A format demonstration, not a verified GoCardless fixture. TODO(human): if you are integrating GoCardless, confirm the signature header name and digest encoding against their current webhook docs. This fixture exists to prove webhook-hooks.ts loops over a batch — a handler that reads payload.type will silently process nothing here.",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "signature": {
+    "scheme": "hmac-sha256-hex",
+    "placement": "header",
+    "header": "Webhook-Signature",
+    "payloadTemplate": "{body}"
+  },
+  "body": {
+    "events": [
+      {
+        "id": "EV_SIM0001",
+        "created_at": "2026-10-19T08:00:00.000Z",
+        "resource_type": "payments",
+        "action": "confirmed",
+        "links": {
+          "payment": "PM_SIM0001"
+        },
+        "details": {
+          "origin": "gocardless",
+          "cause": "payment_confirmed",
+          "description": "Payment was confirmed as collected."
+        }
+      },
+      {
+        "id": "EV_SIM0002",
+        "created_at": "2026-10-19T08:00:01.000Z",
+        "resource_type": "payments",
+        "action": "failed",
+        "links": {
+          "payment": "PM_SIM0002"
+        },
+        "details": {
+          "origin": "bank",
+          "cause": "insufficient_funds",
+          "description": "The customer's account had insufficient funds."
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": 200
+  }
+}

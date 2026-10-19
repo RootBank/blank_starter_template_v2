@@ -1,0 +1,22 @@
+{
+  "name": "afterPolicyIssued-rerun",
+  "hook": "afterPolicyIssued",
+  "description": "The same policy a second time, with provider_customer_id already on app_data. Root retries hooks, so a correct implementation must not create a second customer here.",
+  "notes": "Pair this with afterPolicyIssued.json to check the idempotency rule in docs/07-LIFECYCLE-HOOKS.md § Ordering and idempotency: the intercepted-calls list should show a createCustomer call for the first fixture and none for this one.",
+  "args": {
+    "policy": {
+      "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+      "policy_number": "SIM-0001",
+      "status": "active",
+      "policyholder": {
+        "id": "ph_sim_0001",
+        "email": "simulated.policyholder@example.com",
+        "first_name": "Sim",
+        "last_name": "Policyholder"
+      },
+      "app_data": {
+        "provider_customer_id": "cus_sim_0001"
+      }
+    }
+  }
+}
