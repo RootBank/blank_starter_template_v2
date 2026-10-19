@@ -40,7 +40,7 @@ if (args.help) {
 // ─── --from-spec: read and merge values from a filled SPEC-TEMPLATE.md ───────
 
 if (args['from-spec']) {
-  const specArgs = readSpecFile(args['from-spec']);
+  const specArgs = readSpecFile(args['from-spec'], args);
   // Spec values are defaults; explicit CLI flags take precedence
   for (const [key, val] of Object.entries(specArgs)) {
     if (!args[key]) args[key] = val;
@@ -641,8 +641,9 @@ function toSlug(str) {
 /**
  * readSpecFile — parse a filled SPEC-TEMPLATE.md and extract scaffold args.
  * Reads the "Provider Overview" and other sections for known fields.
+ * `cliArgs` are the already-parsed flags: they win over anything in the spec.
  */
-function readSpecFile(specPath) {
+function readSpecFile(specPath, cliArgs) {
   const absPath = path.resolve(specPath);
   if (!fs.existsSync(absPath)) {
     log('error', `Spec file not found: ${absPath}`);
@@ -671,20 +672,13 @@ function readSpecFile(specPath) {
     }
   }
 
-  // API docs URL → use as base URL if no explicit base-url
-  const urlMatch = content.match(/API docs URL:\s*(.+)/i);
-  if (urlMatch) {
-    const url = urlMatch[1].trim().replace(/^e\.g\.?\s*/i, '');
-    if (url.startsWith('http') && !extracted['base-url']) {
-      // Strip path to get base URL
-      try {
-        const parsed = new URL(url);
-        extracted['base-url'] = `${parsed.protocol}//${parsed.host}`;
-      } catch {
-        // ignore malformed URL
-      }
-    }
-  }
+  // Base URL — sandbox first, since a new integration is built against sandbox.
+  // "API docs URL:" is a different field and is never a substitute for this one.
+  const sandboxUrl = specUrl(content, /API base URL \(sandbox\):\s*(.+)/i);
+  const productionUrl = specUrl(content, /API base URL \(production\):\s*(.+)/i);
+  const plainUrl = specUrl(content, /API base URL:\s*(.+)/i);
+  const baseUrl = sandboxUrl || productionUrl || plainUrl;
+  if (baseUrl) extracted['base-url'] = baseUrl;
 
   // Auth header
   const authMatch = content.match(/Header name:\s*(.+)/i);
@@ -700,7 +694,36 @@ function readSpecFile(specPath) {
     if (header && !header.toLowerCase().startsWith('e.g')) extracted['webhook-header'] = header;
   }
 
+  // http is the default api-type, so a spec with no SDK line lands here too. Fail now,
+  // with the spec named, rather than scaffolding a client that points nowhere.
+  const apiType = cliArgs['api-type'] || extracted['api-type'] || 'http';
+  if (apiType === 'http' && !cliArgs['base-url'] && !extracted['base-url']) {
+    log('error', `No API base URL in ${specPath}`);
+    log('error', 'Add "API base URL (sandbox):" to section 1 of the spec, or pass --base-url explicitly.');
+    log('error', 'An "API docs URL:" is not a base URL — the docs host is rarely the API host.');
+    process.exit(1);
+  }
+
   return extracted;
+}
+
+/**
+ * specUrl — pull an http(s) URL out of a `Label: value` spec line.
+ * The value is used verbatim (minus a trailing slash): a base URL may legitimately
+ * carry a version path. A line still holding the template's `e.g. ...` placeholder
+ * does not start with `http` and is treated as absent.
+ */
+function specUrl(content, pattern) {
+  const match = content.match(pattern);
+  if (!match) return null;
+  const value = match[1].trim().split(/\s+/)[0];
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    new URL(value);
+  } catch {
+    return null;
+  }
+  return value.replace(/\/+$/, '');
 }
 
 function printHelp() {
