@@ -1,0 +1,714 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rootplatform.com/schemas/collection-module/provider.schema.json",
+  "title": "Collection module provider spec",
+  "description": "The machine-readable source of truth for one payment-provider integration. Every block that records a fact extracted from provider documentation carries a mandatory `source` citation. Field vocabularies are pinned to the actual code: PaymentStatus and FailureAction come from @rootplatform/node-sdk, hook names from code/lifecycle-hooks/index.ts, config keys from EnvironmentConfig in code/services/config.service.ts, interface operations from code/interfaces/provider.interfaces.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec_version", "provider", "integration", "auth", "idempotency", "status_map", "config_fields", "lifecycle_hooks"],
+  "properties": {
+    "spec_version": {
+      "const": 1,
+      "description": "Schema contract version. Bump only on a breaking change to this file."
+    },
+    "provider": { "$ref": "#/$defs/provider" },
+    "integration": { "$ref": "#/$defs/integration" },
+    "auth": { "$ref": "#/$defs/auth" },
+    "idempotency": { "$ref": "#/$defs/idempotency" },
+    "api": { "$ref": "#/$defs/api" },
+    "file_exchange": { "$ref": "#/$defs/file_exchange" },
+    "endpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/endpoint" },
+      "description": "One entry per operation the module performs against the provider."
+    },
+    "webhooks": { "$ref": "#/$defs/webhooks" },
+    "status_reports": { "$ref": "#/$defs/status_reports" },
+    "status_map": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/status_map_row" },
+      "description": "Provider status -> Root PaymentStatus. Every provider status named anywhere in this spec must appear here."
+    },
+    "config_fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/config_field" }
+    },
+    "lifecycle_hooks": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/lifecycle_hook_name" },
+      "additionalProperties": { "$ref": "#/$defs/lifecycle_hook" },
+      "description": "Keyed by the hook's exported name. Only hooks this provider actually implements."
+    },
+    "billing_settings": { "$ref": "#/$defs/billing_settings" },
+    "error_scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/error_scenario" }
+    },
+    "deviations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/deviation" },
+      "description": "Every departure from the template's defaults, as data. See docs/16-WHEN-TO-DEVIATE.md."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text that does not belong to any block above. Never load-bearing for generation."
+    }
+  },
+
+  "$defs": {
+    "source": {
+      "description": "Where this fact came from. Mandatory on every extracted block. `web` and `document` citations must carry a verbatim quote, which makes a fabricated citation falsifiable by a later check; `inferred` is the honest escape hatch and must carry a TODO(human) question.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["web", "document", "inferred"] },
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string", "minLength": 3 },
+        "locator": { "type": "string", "minLength": 3 },
+        "section": { "type": "string", "minLength": 2 },
+        "quote": { "type": "string", "minLength": 20 },
+        "retrieved": { "type": "string", "format": "date" },
+        "rationale": { "type": "string", "minLength": 20 },
+        "todo": { "type": "string", "pattern": "^TODO\\(human\\): .+\\?$" }
+      },
+      "oneOf": [
+        {
+          "properties": { "kind": { "const": "web" } },
+          "required": ["kind", "url", "section", "quote", "retrieved"]
+        },
+        {
+          "properties": { "kind": { "const": "document" } },
+          "required": ["kind", "title", "locator", "quote", "retrieved"]
+        },
+        {
+          "properties": { "kind": { "const": "inferred" } },
+          "required": ["kind", "rationale", "todo"]
+        }
+      ]
+    },
+
+    "root_payment_status": {
+      "description": "PaymentStatus from @rootplatform/node-sdk.",
+      "enum": ["submitted", "pending", "processing", "successful", "failed", "cancelled"]
+    },
+
+    "failure_action": {
+      "description": "FailureAction from @rootplatform/node-sdk.",
+      "enum": ["block_payment_method", "block_retry", "allow_retry"]
+    },
+
+    "standard_config_key": {
+      "description": "Keys EnvironmentConfig declares directly. Anything else lives in providerExtraConfig.",
+      "enum": [
+        "providerSecretKey",
+        "providerPublishableKey",
+        "providerWebhookSigningSecret",
+        "providerProductId"
+      ]
+    },
+
+    "interface_operation": {
+      "description": "Methods on PaymentProviderService / PaymentProviderClient. `none` means this operation has no slot in the interface and requires a deviation.",
+      "enum": [
+        "createCustomer",
+        "getCustomer",
+        "updateCustomer",
+        "createPaymentIntent",
+        "getPaymentMethod",
+        "attachPaymentMethod",
+        "cancelSubscription",
+        "verifyWebhookSignature",
+        "none"
+      ]
+    },
+
+    "lifecycle_hook_name": {
+      "description": "Exported hooks in code/lifecycle-hooks/index.ts.",
+      "enum": [
+        "createPaymentMethod",
+        "renderCreatePaymentMethod",
+        "renderViewPaymentMethodSummary",
+        "renderViewPaymentMethod",
+        "afterPolicyPaymentMethodAssigned",
+        "afterPaymentMethodRemoved",
+        "afterPaymentCreated",
+        "afterPaymentUpdated",
+        "afterPolicyIssued",
+        "afterPolicyUpdated",
+        "afterPolicyCancelled",
+        "afterPolicyExpired",
+        "afterPolicyLapsed",
+        "afterAlterationPackageApplied"
+      ]
+    },
+
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "slug", "api_type", "source"],
+      "properties": {
+        "name": { "type": "string", "minLength": 2 },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Used for docs/providers/<slug>.md and generated file names."
+        },
+        "website": { "type": "string", "format": "uri" },
+        "api_docs_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Where the documentation lives. NOT the API host — see api.base_urls."
+        },
+        "doc_hosts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "format": "hostname" },
+          "description": "Allow-list of hosts a `web` citation may cite. Declaring it up front is what stops a citation drifting to an invented host. Required as soon as the spec contains one web citation."
+        },
+        "api_type": {
+          "enum": ["sdk", "http", "file"],
+          "description": "sdk = official client library; http = raw HTTP; file = no synchronous API, exchange happens over files."
+        },
+        "sdk_package": { "type": "string", "minLength": 1 },
+        "api_version": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "api_type": { "const": "sdk" } }, "required": ["api_type"] },
+      "then": { "required": ["sdk_package"] }
+    },
+
+    "integration": {
+      "description": "The shape discriminators. These exist so a spec cannot silently assume Stripe's shape (synchronous per-payment charge, webhook status).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collection_model", "status_source", "source"],
+      "properties": {
+        "collection_model": {
+          "enum": ["api_sync", "api_async", "batch_file"],
+          "description": "api_sync = charge resolves on the call; api_async = charge accepted then settles later; batch_file = payments are accumulated and submitted as a file."
+        },
+        "status_source": {
+          "enum": ["webhook", "response_file", "polling"],
+          "description": "How the module learns a payment's outcome."
+        },
+        "supports_refunds": { "type": "boolean" },
+        "supports_partial_refunds": { "type": "boolean" },
+        "currencies": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Z]{3}$" } },
+        "amount_unit": { "enum": ["minor", "major"], "description": "minor = cents. Root sends minor units." },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "api": {
+      "description": "HTTP transport details. Absent when provider.api_type is \"file\". Credentials live in the top-level auth block, which a file provider needs too.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_urls"],
+      "properties": {
+        "base_urls": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sandbox", "production", "source"],
+          "properties": {
+            "sandbox": { "$ref": "#/$defs/api_base_url" },
+            "production": { "$ref": "#/$defs/api_base_url" },
+            "source": { "$ref": "#/$defs/source" }
+          }
+        },
+        "rate_limit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source"],
+          "properties": {
+            "requests_per_second": { "type": "number", "minimum": 0 },
+            "burst": { "type": "integer", "minimum": 0 },
+            "retry_after_header": { "type": "string" },
+            "notes": { "type": "string" },
+            "source": { "$ref": "#/$defs/source" }
+          }
+        }
+      }
+    },
+
+    "api_base_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://[^/?#]+(/[^?#]*)?$",
+      "description": "The host the module calls. Must be the API host, never the documentation host — this is checked semantically as well as by pattern."
+    },
+
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "source"],
+      "properties": {
+        "type": {
+          "enum": ["api_key", "bearer", "basic", "hmac", "oauth2", "mtls", "sftp_key", "none"]
+        },
+        "header": { "type": "string", "minLength": 1 },
+        "format": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Literal header value with the config key in braces, e.g. 'Bearer {providerSecretKey}'."
+        },
+        "config_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must name an entry in config_fields."
+        },
+        "token_url": { "type": "string", "format": "uri" },
+        "refresh_notes": { "type": "string" },
+        "notes": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["api_key", "bearer", "basic", "hmac"] } }, "required": ["type"] },
+          "then": { "required": ["header", "format", "config_key"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "oauth2" } }, "required": ["type"] },
+          "then": { "required": ["token_url", "config_key", "refresh_notes"] }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["mtls", "sftp_key"] } }, "required": ["type"] },
+          "then": { "required": ["config_key", "notes"] }
+        }
+      ]
+    },
+
+    "idempotency": {
+      "description": "docs/16-WHEN-TO-DEVIATE.md lists idempotency as a never-deviate rule, so the spec must state the mechanism rather than leave it implied. Top level, not inside api: a batch-file provider still has to say why a resubmitted file does not debit twice.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "mechanism", "source"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "mechanism": { "enum": ["header", "body_field", "natural_key", "provider_native", "none"] },
+        "header": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 },
+        "key_source": {
+          "enum": ["root_payment_id", "root_policy_id", "root_payment_method_id", "composite"],
+          "description": "Which Root identifier is used as the key."
+        },
+        "notes": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "mechanism": { "const": "header" } }, "required": ["mechanism"] },
+          "then": { "required": ["header", "key_source"] }
+        },
+        {
+          "if": { "properties": { "mechanism": { "const": "body_field" } }, "required": ["mechanism"] },
+          "then": { "required": ["field", "key_source"] }
+        },
+        {
+          "if": { "properties": { "mechanism": { "const": "natural_key" } }, "required": ["mechanism"] },
+          "then": { "required": ["key_source", "notes"] }
+        }
+      ]
+    },
+
+    "endpoint": {
+      "description": "One operation the module performs against the provider. An http provider declares method+path; an sdk provider declares the SDK call it makes, because that is what the generated client will actually contain.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "maps_to_interface", "source"],
+      "anyOf": [
+        { "required": ["path", "method"] },
+        { "required": ["sdk_call"] }
+      ],
+      "properties": {
+        "operation": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "maps_to_interface": { "$ref": "#/$defs/interface_operation" },
+        "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        "path": { "type": "string", "pattern": "^/" },
+        "sdk_call": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][A-Za-z0-9_.]*$",
+          "description": "Dotted path on the SDK instance, e.g. customers.create."
+        },
+        "request_notes": { "type": "string" },
+        "returns": { "type": "string", "minLength": 1, "description": "Provider object the call returns, e.g. 'payment_intent'." },
+        "provider_statuses": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Statuses this call can return. Each must appear in status_map."
+        },
+        "deviation_ref": { "type": "string", "pattern": "^DEV-\\d{3}$" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "maps_to_interface": { "const": "none" } }, "required": ["maps_to_interface"] },
+      "then": { "required": ["deviation_ref"] }
+    },
+
+    "webhooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signature", "payload", "events"],
+      "properties": {
+        "endpoint_path": { "type": "string", "pattern": "^/" },
+        "signature": { "$ref": "#/$defs/webhook_signature" },
+        "payload": { "$ref": "#/$defs/webhook_payload" },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/webhook_event" }
+        }
+      }
+    },
+
+    "webhook_signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["header", "algorithm", "scheme", "secret_config_key", "source"],
+      "properties": {
+        "header": { "type": "string", "minLength": 1 },
+        "algorithm": {
+          "enum": ["hmac_sha256", "hmac_sha1", "hmac_sha512", "rsa_sha256", "basic_auth", "none"]
+        },
+        "scheme": {
+          "enum": ["sdk_verified", "raw_body_hmac", "field_concat_hmac", "header_token"],
+          "description": "What is actually signed. sdk_verified = the provider SDK verifies for us."
+        },
+        "signed_payload_notes": { "type": "string" },
+        "secret_config_key": { "type": "string", "minLength": 1 },
+        "timestamp_header": { "type": "string" },
+        "timestamp_tolerance_seconds": { "type": "integer", "minimum": 0 },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "scheme": { "const": "field_concat_hmac" } }, "required": ["scheme"] },
+      "then": { "required": ["signed_payload_notes"] }
+    },
+
+    "webhook_payload": {
+      "description": "The four shapes in docs/08-WEBHOOKS.md. The paths below are what a WebhookParser uses to produce ParsedWebhookEvent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "content_type", "event_type_path", "reference_path", "source"],
+      "properties": {
+        "shape": { "enum": ["flat", "batched", "wrapped", "form_encoded"] },
+        "content_type": { "type": "string", "minLength": 3 },
+        "events_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dot path to the array of events. Required for batched and wrapped shapes."
+        },
+        "event_type_path": { "type": "string", "minLength": 1, "description": "Dot path, relative to one event." },
+        "reference_path": { "type": "string", "minLength": 1, "description": "Dot path to the provider id this event is about." },
+        "status_path": { "type": "string", "minLength": 1 },
+        "delivery_notes": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "shape": { "enum": ["batched", "wrapped"] } }, "required": ["shape"] },
+      "then": { "required": ["events_path"] }
+    },
+
+    "webhook_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "trigger", "root_action", "source"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "trigger": { "type": "string", "minLength": 5 },
+        "provider_status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The provider status this event carries, if any. Must appear in status_map."
+        },
+        "applies_to": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The provider object provider_status belongs to. Required only when one status word is reused across objects."
+        },
+        "root_action": { "$ref": "#/$defs/root_action" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "root_action": {
+      "description": "What the module does on Root's side. Every declared event must have one — an event with no action is an event nobody wired up.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "update_payment_status",
+            "cancel_policy",
+            "update_policy_app_data",
+            "reconcile_payment_method",
+            "ignore",
+            "custom"
+          ]
+        },
+        "payment_status": { "$ref": "#/$defs/root_payment_status" },
+        "failure_action": { "$ref": "#/$defs/failure_action" },
+        "notes": { "type": "string", "minLength": 10 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "update_payment_status" } }, "required": ["kind"] },
+          "then": { "required": ["payment_status"] }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["custom", "ignore"] } }, "required": ["kind"] },
+          "then": { "required": ["notes"] }
+        }
+      ]
+    },
+
+    "file_exchange": {
+      "description": "For providers whose collection_model is batch_file. The template has no file-transport abstraction, so a spec using this block is expected to carry a matching deviation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["submission", "source"],
+      "properties": {
+        "submission": { "$ref": "#/$defs/file_channel" },
+        "response": { "$ref": "#/$defs/file_channel" },
+        "record_layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference", "source"],
+          "properties": {
+            "reference": { "type": "string", "minLength": 3 },
+            "notes": { "type": "string" },
+            "source": { "$ref": "#/$defs/source" }
+          }
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "file_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transport", "path_pattern", "format", "source"],
+      "properties": {
+        "transport": { "enum": ["sftp", "ftps", "https", "s3"] },
+        "host_config_key": { "type": "string", "minLength": 1 },
+        "path_pattern": { "type": "string", "minLength": 1 },
+        "format": { "enum": ["fixed_width", "csv", "xml", "json", "pain_001", "other"] },
+        "cutoff_time_utc": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+        "available_after": { "type": "string" },
+        "max_records_per_file": { "type": "integer", "minimum": 1 },
+        "notes": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "status_reports": {
+      "description": "For providers whose status_source is response_file or polling.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "codes", "source"],
+      "properties": {
+        "mechanism": { "enum": ["response_file", "polling"] },
+        "schedule": { "type": "string", "minLength": 3, "description": "When the module looks for an update." },
+        "poll_operation": { "type": "string", "description": "Name of the endpoint entry used to poll. Required when mechanism is polling." },
+        "codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "meaning", "provider_status", "source"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "meaning": { "type": "string", "minLength": 5 },
+              "provider_status": { "type": "string", "minLength": 1 },
+              "applies_to": { "type": "string", "minLength": 1 },
+              "source": { "$ref": "#/$defs/source" }
+            }
+          }
+        },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "mechanism": { "const": "polling" } }, "required": ["mechanism"] },
+      "then": { "required": ["poll_operation", "schedule"] }
+    },
+
+    "status_map_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider_status", "applies_to", "root_status", "source"],
+      "properties": {
+        "provider_status": { "type": "string", "minLength": 1 },
+        "applies_to": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The provider object this status belongs to, e.g. 'invoice', 'payment_intent', 'response_file_code'. Two objects may reuse one status word with different meanings."
+        },
+        "root_status": { "$ref": "#/$defs/root_payment_status" },
+        "failure_action": { "$ref": "#/$defs/failure_action" },
+        "terminal": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "root_status": { "const": "failed" } }, "required": ["root_status"] },
+      "then": { "required": ["failure_action"] }
+    },
+
+    "config_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "storage", "description", "source"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "storage": {
+          "enum": ["standard", "extra"],
+          "description": "standard = a declared EnvironmentConfig field; extra = goes in providerExtraConfig."
+        },
+        "description": { "type": "string", "minLength": 5 },
+        "example": { "type": "string" },
+        "secret": { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "if": { "properties": { "storage": { "const": "standard" } }, "required": ["storage"] },
+      "then": { "properties": { "name": { "$ref": "#/$defs/standard_config_key" } } }
+    },
+
+    "lifecycle_hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["behaviour", "idempotency", "source"],
+      "properties": {
+        "behaviour": { "type": "string", "minLength": 10 },
+        "provider_operations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Names of endpoint entries this hook calls."
+        },
+        "actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["schedule_payment", "reschedule_payment", "unschedule_payment"] },
+          "description": "Scheduled-payment actions this hook returns. See docs/17-SCHEDULED-PAYMENTS.md."
+        },
+        "idempotency": {
+          "type": "string",
+          "minLength": 10,
+          "description": "How a redelivery of this hook avoids a duplicate side effect. Root may retry."
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "billing_settings": {
+      "description": "Mirrors billingSettings in root.config.json. Present when the provider uses scheduled payments.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batching", "source"],
+      "properties": {
+        "batching": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "submit_payments_function": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+            "submit_batch_size": { "type": "integer", "minimum": 1, "maximum": 500 },
+            "schedule_time_utc": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+            "submission_lead_time": { "type": "integer", "minimum": 0, "maximum": 7 },
+            "latest_submission_time_utc": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" }
+          },
+          "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+          "then": { "required": ["submit_payments_function"] }
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_attempts", "backoff_days", "backoff_multiplier"],
+          "properties": {
+            "max_attempts": { "type": "integer", "minimum": 0 },
+            "backoff_days": { "type": "integer", "minimum": 0 },
+            "backoff_multiplier": { "type": "number", "minimum": 1 }
+          }
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "error_scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario", "module_error", "handling", "retryable", "source"],
+      "properties": {
+        "scenario": { "type": "string", "minLength": 5 },
+        "provider_error_code": { "type": "string", "minLength": 1 },
+        "http_status": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "module_error": {
+          "description": "The EnhancedModuleError subclass thrown at the service boundary. See code/utils/error-types.ts.",
+          "enum": [
+            "ValidationError",
+            "NotFoundError",
+            "NetworkError",
+            "TimeoutError",
+            "RateLimitError",
+            "ServerError",
+            "EnhancedModuleError"
+          ]
+        },
+        "handling": { "type": "string", "minLength": 10 },
+        "retryable": { "type": "boolean" },
+        "root_payment_status": { "$ref": "#/$defs/root_payment_status" },
+        "failure_action": { "$ref": "#/$defs/failure_action" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+
+    "deviation": {
+      "description": "docs/16-WHEN-TO-DEVIATE.md requires a deviation to be recorded in three places: a code comment, the provider doc, and the PR. All three are fields here so a later slice can cross-check them against the code.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rule", "summary", "rationale", "code_marker", "provider_doc", "pr_note"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^DEV-\\d{3}$" },
+        "rule": {
+          "enum": [
+            "webhooks",
+            "provider_interface",
+            "lifecycle_hook_ordering",
+            "idempotency",
+            "di_tokens",
+            "config_naming",
+            "error_mapping",
+            "logging",
+            "adapter_shape",
+            "other"
+          ]
+        },
+        "summary": { "type": "string", "minLength": 10 },
+        "rationale": { "type": "string", "minLength": 20 },
+        "code_marker": {
+          "type": "string",
+          "pattern": "^DEVIATION: .+",
+          "description": "Verbatim text of the `// DEVIATION:` comment in the code, so the two can be diffed."
+        },
+        "files": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 3 }
+        },
+        "provider_doc": {
+          "type": "string",
+          "pattern": "^docs/providers/[a-z0-9-]+\\.md#",
+          "description": "Path and anchor in the provider doc where this deviation is written up."
+        },
+        "pr_note": { "type": "string", "minLength": 20, "description": "The sentence to put in the PR description." },
+        "approved_by": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    }
+  }
+}

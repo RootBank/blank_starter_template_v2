@@ -58,6 +58,7 @@
     "scaffold:provider": "node ../scripts/scaffold-provider.js",
     "validate:provider": "node ../scripts/validate-provider.js",
     "extract:spec": "node ../scripts/extract-spec.js",
+    "spec:validate": "node ../scripts/validate-spec.js",
     "log:action": "node ../scripts/log-action.js",
     "build:llms": "node ../scripts/build-llms-full.js",
     "predeploy": "npm run validate && npm run test && npm run build",
