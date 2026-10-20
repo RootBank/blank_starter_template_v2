@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: collection_module/.nvmrc
           cache: npm
@@ -51,7 +51,11 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npm test
+        # test:ci rather than test: it adds --coverage, which is what makes the 70%
+        # global coverageThreshold in jest.config.js actually get evaluated. Plain
+        # `npm test` passes regardless of coverage. main currently sits at 86% stmts
+        # / 74% branches, so the threshold is met with room.
+        run: npm run test:ci
 
       - name: Build
         run: npm run build
