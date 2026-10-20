@@ -101,6 +101,47 @@ describe('scaffold-provider --from-spec: base URL', () => {
     expect(output).toContain('"created":8');
   });
 
+  // extract-spec.js writes this shape whenever ANTHROPIC_API_KEY is unset: the template
+  // first, then the provider's own documentation embedded below it. A base URL named only
+  // in that trailing text is documentation prose, not a declared field.
+  it('does not take a base URL from the raw content a passthrough spec embeds', () => {
+    const specFile = writeSpec(
+      'passthrough.md',
+      `${spec()}
+---
+
+## Raw Source Content
+
+<details>
+<summary>Click to expand raw content</summary>
+
+\`\`\`
+TestCo Developer Guide
+
+Getting started
+API base URL: https://docs-example.testco.io/mock-server
+All requests must be authenticated.
+\`\`\`
+
+</details>
+`,
+    );
+
+    let output = '';
+    let status: number | null = null;
+    try {
+      scaffold(specFile);
+    } catch (err) {
+      const e = err as { status: number; stdout: string };
+      status = e.status;
+      output = e.stdout;
+    }
+
+    expect(status).toBe(1);
+    expect(output).toContain('No API base URL');
+    expect(output).not.toContain('docs-example.testco.io');
+  });
+
   it('ignores a base URL line still holding the template placeholder', () => {
     const specFile = writeSpec(
       'placeholder.md',

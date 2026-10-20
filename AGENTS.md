@@ -40,9 +40,7 @@ The doc set has a house style. Keep it when you add or edit a doc:
 - **Dry, reference-style, link-heavy.** No marketing voice.
 - **Scope discipline.** Change the docs the task names. Don't rewrite a neighbouring doc because you happen to be in it.
 - **Every code example is valid TypeScript** and consistent with the conventions above.
-- **Grep the source before you describe it.** If it's still ambiguous, leave a `TODO(human):` with a specific question rather than inventing semantics.
 - **Every numbered doc ends with a `## You've understood this if…` section** — 2–4 concrete, answerable checks. "You can name the three lifecycle hooks invoked during a refund and the order they run in", not "You understand lifecycle hooks".
-- **Don't renumber.** The numbered docs cross-reference each other by number; renumbering breaks every one of those links.
 
 ## Adding a new provider
 

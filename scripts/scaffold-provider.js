@@ -674,10 +674,11 @@ function readSpecFile(specPath, cliArgs) {
 
   // Base URL — sandbox first, since a new integration is built against sandbox.
   // "API docs URL:" is a different field and is never a substitute for this one.
-  const sandboxUrl = specUrl(content, /API base URL \(sandbox\):\s*(.+)/i);
-  const productionUrl = specUrl(content, /API base URL \(production\):\s*(.+)/i);
-  const plainUrl = specUrl(content, /API base URL:\s*(.+)/i);
-  const baseUrl = sandboxUrl || productionUrl || plainUrl;
+  // Both labels match exactly: a looser pattern reaches into the raw provider docs
+  // that extract-spec.js embeds below the template in passthrough mode.
+  const baseUrl =
+    specUrl(content, /API base URL \(sandbox\):\s*(.+)/i) ||
+    specUrl(content, /API base URL \(production\):\s*(.+)/i);
   if (baseUrl) extracted['base-url'] = baseUrl;
 
   // Auth header
