@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://rootplatform.com/schemas/collection-module/provider.schema.json",
   "title": "Collection module provider spec",
-  "description": "The machine-readable source of truth for one payment-provider integration. Every block that records a fact extracted from provider documentation carries a mandatory `source` citation. Field vocabularies are pinned to the actual code: PaymentStatus and FailureAction come from @rootplatform/node-sdk, hook names from code/lifecycle-hooks/index.ts, config keys from EnvironmentConfig in code/services/config.service.ts, interface operations from code/interfaces/provider.interfaces.ts.",
+  "description": "The machine-readable source of truth for one payment-provider integration. Blocks where a wrong value costs money carry a mandatory `source` citation: auth, idempotency, status_map rows, status-report codes and the webhook signature. Every other block may carry one and it is validated when present, but is not forced to. Field vocabularies are pinned to the actual code: PaymentStatus and FailureAction come from @rootplatform/node-sdk, hook names from code/lifecycle-hooks/index.ts, config keys from EnvironmentConfig in code/services/config.service.ts, interface operations from code/interfaces/provider.interfaces.ts.",
   "type": "object",
   "additionalProperties": false,
   "required": ["spec_version", "provider", "integration", "auth", "idempotency", "status_map", "config_fields", "lifecycle_hooks"],
@@ -151,7 +151,7 @@
     "provider": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "slug", "api_type", "source"],
+      "required": ["name", "slug", "api_type"],
       "properties": {
         "name": { "type": "string", "minLength": 2 },
         "slug": {
@@ -188,7 +188,7 @@
       "description": "The shape discriminators. These exist so a spec cannot silently assume Stripe's shape (synchronous per-payment charge, webhook status).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["collection_model", "status_source", "source"],
+      "required": ["collection_model", "status_source"],
       "properties": {
         "collection_model": {
           "enum": ["api_sync", "api_async", "batch_file"],
@@ -215,7 +215,7 @@
         "base_urls": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["sandbox", "production", "source"],
+          "required": ["sandbox", "production"],
           "properties": {
             "sandbox": { "$ref": "#/$defs/api_base_url" },
             "production": { "$ref": "#/$defs/api_base_url" },
@@ -225,7 +225,6 @@
         "rate_limit": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source"],
           "properties": {
             "requests_per_second": { "type": "number", "minimum": 0 },
             "burst": { "type": "integer", "minimum": 0 },
@@ -321,7 +320,7 @@
       "description": "One operation the module performs against the provider. An http provider declares method+path; an sdk provider declares the SDK call it makes, because that is what the generated client will actually contain.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["operation", "maps_to_interface", "source"],
+      "required": ["operation", "maps_to_interface"],
       "anyOf": [
         { "required": ["path", "method"] },
         { "required": ["sdk_call"] }
@@ -394,7 +393,7 @@
       "description": "The four shapes in docs/08-WEBHOOKS.md. The paths below are what a WebhookParser uses to produce ParsedWebhookEvent.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["shape", "content_type", "event_type_path", "reference_path", "source"],
+      "required": ["shape", "content_type", "event_type_path", "reference_path"],
       "properties": {
         "shape": { "enum": ["flat", "batched", "wrapped", "form_encoded"] },
         "content_type": { "type": "string", "minLength": 3 },
@@ -416,7 +415,7 @@
     "webhook_event": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "trigger", "root_action", "source"],
+      "required": ["name", "trigger", "root_action"],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
         "trigger": { "type": "string", "minLength": 5 },
@@ -471,14 +470,14 @@
       "description": "For providers whose collection_model is batch_file. The template has no file-transport abstraction, so a spec using this block is expected to carry a matching deviation.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["submission", "source"],
+      "required": ["submission"],
       "properties": {
         "submission": { "$ref": "#/$defs/file_channel" },
         "response": { "$ref": "#/$defs/file_channel" },
         "record_layout": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["reference", "source"],
+          "required": ["reference"],
           "properties": {
             "reference": { "type": "string", "minLength": 3 },
             "notes": { "type": "string" },
@@ -492,7 +491,7 @@
     "file_channel": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["transport", "path_pattern", "format", "source"],
+      "required": ["transport", "path_pattern", "format"],
       "properties": {
         "transport": { "enum": ["sftp", "ftps", "https", "s3"] },
         "host_config_key": { "type": "string", "minLength": 1 },
@@ -510,7 +509,7 @@
       "description": "For providers whose status_source is response_file or polling.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["mechanism", "codes", "source"],
+      "required": ["mechanism", "codes"],
       "properties": {
         "mechanism": { "enum": ["response_file", "polling"] },
         "schedule": { "type": "string", "minLength": 3, "description": "When the module looks for an update." },
@@ -560,7 +559,7 @@
     "config_field": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "storage", "description", "source"],
+      "required": ["name", "storage", "description"],
       "properties": {
         "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
         "storage": {
@@ -580,7 +579,7 @@
     "lifecycle_hook": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["behaviour", "idempotency", "source"],
+      "required": ["behaviour", "idempotency"],
       "properties": {
         "behaviour": { "type": "string", "minLength": 10 },
         "provider_operations": {
@@ -608,7 +607,7 @@
       "description": "Mirrors billingSettings in root.config.json. Present when the provider uses scheduled payments.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["batching", "source"],
+      "required": ["batching"],
       "properties": {
         "batching": {
           "type": "object",
@@ -642,7 +641,7 @@
     "error_scenario": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scenario", "module_error", "handling", "retryable", "source"],
+      "required": ["scenario", "module_error", "handling", "retryable"],
       "properties": {
         "scenario": { "type": "string", "minLength": 5 },
         "provider_error_code": { "type": "string", "minLength": 1 },

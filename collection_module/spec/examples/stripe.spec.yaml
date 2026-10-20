@@ -20,23 +20,11 @@ provider:
   api_type: sdk
   sdk_package: stripe
   api_version: '2023-10-16'
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/STRIPE-REFERENCE.md § Client
-    quote: "this.sdk = new Stripe(config.get('providerSecretKey'), {"
-    retrieved: '2026-10-19'
 
 integration:
   collection_model: api_sync
   status_source: webhook
   currencies: [ZAR]
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/STRIPE-REFERENCE.md § Lifecycle Hooks, afterPaymentCreated
-    quote: "currency: policy.currency ?? 'ZAR',"
-    retrieved: '2026-10-19'
 
 auth:
   type: bearer
@@ -74,12 +62,6 @@ api:
   base_urls:
     sandbox: https://api.stripe.com
     production: https://api.stripe.com
-    source:
-      kind: web
-      url: https://docs.stripe.com/api/idempotent_requests
-      section: Idempotent requests
-      quote: 'curl https://api.stripe.com/v1/customers'
-      retrieved: '2026-10-19'
 
 endpoints:
   - operation: createCustomer
@@ -87,35 +69,17 @@ endpoints:
     sdk_call: customers.create
     returns: customer
     request_notes: 'email, name, metadata.root_policy_id'
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Create customer
-      quote: 'async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {'
-      retrieved: '2026-10-19'
 
   - operation: getCustomer
     maps_to_interface: getCustomer
     sdk_call: customers.retrieve
     returns: customer
-    source:
-      kind: document
-      title: Collection module template
-      locator: code/interfaces/provider.interfaces.ts § PaymentProviderService
-      quote: 'getCustomer(customerId: string): Promise<ProviderCustomer>;'
-      retrieved: '2026-10-19'
 
   - operation: updateCustomer
     maps_to_interface: updateCustomer
     sdk_call: customers.update
     returns: customer
     request_notes: 'Also used to set invoice_settings.default_payment_method.'
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Attach payment method
-      quote: 'invoice_settings: { default_payment_method: params.paymentMethodId },'
-      retrieved: '2026-10-19'
 
   - operation: createPaymentIntent
     maps_to_interface: createPaymentIntent
@@ -123,48 +87,21 @@ endpoints:
     returns: payment_intent
     request_notes: 'confirm: true and off_session: true — the policyholder is not present.'
     provider_statuses: [succeeded, processing, requires_payment_method, canceled]
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Create payment intent
-      quote: 'async createPaymentIntent(params: CreatePaymentIntentParams): Promise<ProviderPaymentIntent> {'
-      retrieved: '2026-10-19'
 
   - operation: getPaymentMethod
     maps_to_interface: getPaymentMethod
     sdk_call: paymentMethods.retrieve
     returns: payment_method
-    source:
-      kind: document
-      title: Collection module template
-      locator: code/interfaces/provider.interfaces.ts § PaymentProviderService
-      quote: |-
-          getPaymentMethod(
-            paymentMethodId: string
-          ): Promise<ProviderPaymentMethod>;
-      retrieved: '2026-10-19'
 
   - operation: attachPaymentMethod
     maps_to_interface: attachPaymentMethod
     sdk_call: paymentMethods.attach
     returns: payment_method
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Attach payment method
-      quote: 'const pm = await this.providerClient.sdk.paymentMethods.attach(params.paymentMethodId, {'
-      retrieved: '2026-10-19'
 
   - operation: cancelSubscription
     maps_to_interface: cancelSubscription
     sdk_call: subscriptions.cancel
     returns: subscription
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Cancel subscription
-      quote: 'const sub = await this.providerClient.sdk.subscriptions.cancel(subscriptionId);'
-      retrieved: '2026-10-19'
 
 webhooks:
   signature:
@@ -195,14 +132,6 @@ webhooks:
     delivery_notes: >-
       One event per request. Stripe does not guarantee ordering and may
       redeliver, so every handler must be idempotent on the event id.
-    source:
-      kind: web
-      url: https://docs.stripe.com/webhooks
-      section: Event ordering
-      quote: >-
-        Stripe doesn’t guarantee the delivery of events in the order that
-        they’re generated.
-      retrieved: '2026-10-19'
 
   events:
     - name: invoice.paid
@@ -212,12 +141,6 @@ webhooks:
       root_action:
         kind: update_payment_status
         payment_status: successful
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Adapter
-        quote: 'Used in: `invoice.paid` controller (pass `PaymentStatus.Successful`)'
-        retrieved: '2026-10-19'
 
     # No provider_status: the reference implementation routes this event by
     # name, not by the invoice's status field. spec:validate warns about that,
@@ -228,12 +151,6 @@ webhooks:
         kind: update_payment_status
         payment_status: failed
         failure_action: block_retry
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Adapter
-        quote: '`invoice.payment_failed` controller (pass `PaymentStatus.Failed` + failure reason)'
-        retrieved: '2026-10-19'
 
     - name: payment_intent.succeeded
       trigger: The payment intent completed successfully.
@@ -242,12 +159,6 @@ webhooks:
       root_action:
         kind: update_payment_status
         payment_status: successful
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Events
-        quote: "PAYMENT_INTENT_SUCCEEDED:        'payment_intent.succeeded',"
-        retrieved: '2026-10-19'
 
     - name: payment_intent.payment_failed
       trigger: The payment intent could not be charged and needs a new payment method.
@@ -257,12 +168,6 @@ webhooks:
         kind: update_payment_status
         payment_status: failed
         failure_action: block_retry
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Events
-        quote: "PAYMENT_INTENT_FAILED:          'payment_intent.payment_failed',"
-        retrieved: '2026-10-19'
 
     - name: charge.dispute.created
       trigger: The policyholder's bank opened a dispute against a charge.
@@ -271,12 +176,6 @@ webhooks:
         notes: >-
           A dispute is not a payment status change. Root has no dispute concept,
           so the module records it on the policy and notifies operations.
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Events
-        quote: "CHARGE_DISPUTE_CREATED:          'charge.dispute.created',"
-        retrieved: '2026-10-19'
 
     - name: subscription_schedule.updated
       trigger: A subscription schedule changed.
@@ -285,12 +184,6 @@ webhooks:
         notes: >-
           Subscribed for audit visibility only. Root owns the billing schedule,
           so a Stripe-side schedule change must not write back to the policy.
-      source:
-        kind: document
-        title: Collection module template
-        locator: docs/STRIPE-REFERENCE.md § Events
-        quote: "SUBSCRIPTION_SCHEDULE_UPDATED:   'subscription_schedule.updated',"
-        retrieved: '2026-10-19'
 
 status_map:
   - provider_status: paid
@@ -390,12 +283,6 @@ config_fields:
     example: sk_test_xxx
     secret: true
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Config Fields
-      quote: '| `providerSecretKey` | `PROVIDER_SECRET_KEY_LIVE` / `_TEST` | `sk_live_...` / `sk_test_...` |'
-      retrieved: '2026-10-19'
 
   - name: providerWebhookSigningSecret
     storage: standard
@@ -403,12 +290,6 @@ config_fields:
     example: whsec_xxx
     secret: true
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Config Fields
-      quote: '| `providerWebhookSigningSecret` | `PROVIDER_WEBHOOK_SIGNING_SECRET_LIVE` / `_TEST` | `whsec_...` |'
-      retrieved: '2026-10-19'
 
   - name: providerPublishableKey
     storage: standard
@@ -416,12 +297,6 @@ config_fields:
     example: pk_test_xxx
     secret: false
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Config Fields
-      quote: '| `providerPublishableKey` | `PROVIDER_PUBLISHABLE_KEY_LIVE` / `_TEST` | `pk_live_...` |'
-      retrieved: '2026-10-19'
 
   - name: providerProductId
     storage: standard
@@ -429,12 +304,6 @@ config_fields:
     example: prod_xxx
     secret: false
     required: false
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Config Fields
-      quote: '| `providerProductId` | `PROVIDER_PRODUCT_ID_LIVE` / `_TEST` | `prod_...` |'
-      retrieved: '2026-10-19'
 
 lifecycle_hooks:
   afterPolicyIssued:
@@ -445,12 +314,6 @@ lifecycle_hooks:
     idempotency: >-
       metadata.root_policy_id carries the policy id. On redelivery, look the
       customer up by that metadata before creating a second one.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Lifecycle Hooks, afterPolicyIssued
-      quote: 'metadata: { root_policy_id: policy.policy_id },'
-      retrieved: '2026-10-19'
 
   afterPolicyPaymentMethodAssigned:
     behaviour: >-
@@ -460,12 +323,6 @@ lifecycle_hooks:
     idempotency: >-
       Attaching an already-attached payment method is a no-op on Stripe's side,
       so a redelivered hook is safe.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Lifecycle Hooks, afterPolicyPaymentMethodAssigned
-      quote: 'await providerService.attachPaymentMethod({ paymentMethodId: stripePaymentMethodId, customerId });'
-      retrieved: '2026-10-19'
 
   afterPaymentCreated:
     behaviour: >-
@@ -475,12 +332,6 @@ lifecycle_hooks:
     idempotency: >-
       Send the Root payment id as the Idempotency-Key so a redelivered hook
       replays the first response instead of charging again.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Lifecycle Hooks, afterPaymentCreated
-      quote: 'metadata: { rootPaymentId: payment.payment_id, rootPolicyId: policy.policy_id },'
-      retrieved: '2026-10-19'
 
   afterPolicyCancelled:
     behaviour: Cancel the Stripe subscription backing the policy.
@@ -488,12 +339,6 @@ lifecycle_hooks:
     idempotency: >-
       Cancelling an already-cancelled subscription returns the cancelled object
       rather than erroring, so the hook is safe to repeat.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/STRIPE-REFERENCE.md § Service, Cancel subscription
-      quote: 'async cancelSubscription(subscriptionId: string): Promise<ProviderSubscription> {'
-      retrieved: '2026-10-19'
 
 error_scenarios:
   - scenario: The stored card was declined when charging a premium.
@@ -506,12 +351,6 @@ error_scenarios:
     retryable: false
     root_payment_status: failed
     failure_action: block_retry
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/SPEC-TEMPLATE.md § 8. Error Scenarios
-      quote: '| Invalid card | `card_error` | Return validation error to Root |'
-      retrieved: '2026-10-19'
 
   - scenario: The Stripe customer referenced by the policy no longer exists.
     provider_error_code: resource_missing
@@ -519,12 +358,6 @@ error_scenarios:
     module_error: NotFoundError
     handling: Log a warning and skip the update rather than recreating the customer silently.
     retryable: false
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/SPEC-TEMPLATE.md § 8. Error Scenarios
-      quote: '| Customer not found | `resource_not_found` | Log warning, skip update |'
-      retrieved: '2026-10-19'
 
   - scenario: Stripe returned 429 while creating a payment intent.
     provider_error_code: rate_limit
@@ -532,26 +365,12 @@ error_scenarios:
     module_error: RateLimitError
     handling: Retry through retryWithBackoff; the idempotency key makes the retry safe.
     retryable: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/12-ERROR-HANDLING.md
-      quote: 'Wrap external calls in `retryWithBackoff`'
-      retrieved: '2026-10-19'
 
   - scenario: A webhook arrived with an invalid or missing signature.
     http_status: 400
     module_error: ValidationError
     handling: Reject with 400 before any processing and log the rejection. Never act on an unverified payload.
     retryable: false
-    source:
-      kind: web
-      url: https://docs.stripe.com/webhooks
-      section: Verify events are sent from Stripe
-      quote: >-
-        Always verify that webhook events originate from Stripe before acting on
-        them.
-      retrieved: '2026-10-19'
 
 notes: >-
   Stripe needs no deviations: it is the shape the template was built around. The

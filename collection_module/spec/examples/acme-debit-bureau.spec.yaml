@@ -21,14 +21,6 @@ provider:
   name: Acme Debit Bureau
   slug: acme-debit-bureau
   api_type: file
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/16-WHEN-TO-DEVIATE.md § When to deviate
-    quote: >-
-      Some providers (especially direct-debit gateways) only accept batched
-      files daily.
-    retrieved: '2026-10-19'
 
 integration:
   collection_model: batch_file
@@ -36,14 +28,6 @@ integration:
   currencies: [ZAR]
   amount_unit: minor
   supports_refunds: false
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/17-SCHEDULED-PAYMENTS.md § batching
-    quote: >-
-      `true` → API submission via your hook. `false` → file-based debit via the
-      platform batcher.
-    retrieved: '2026-10-19'
 
 auth:
   type: sftp_key
@@ -89,12 +73,6 @@ file_exchange:
       One file per collection day. A file arriving after the cutoff is processed
       on the next banking day, which is why latest_submission_time_utc below is
       set earlier than this.
-    source:
-      kind: inferred
-      rationale: >-
-        File naming, the cutoff and the record ceiling are bureau-specific
-        operational facts that only the bureau's file-layout document states.
-      todo: 'TODO(human): What is the exact file-name pattern, daily cutoff and per-file record limit in the bureau file-layout document?'
 
   response:
     transport: sftp
@@ -106,33 +84,12 @@ file_exchange:
       Unpaid results arrive later than paid ones. A payment with no response
       line is still in flight, not successful, so absence must never be read as
       success.
-    source:
-      kind: inferred
-      rationale: >-
-        The settlement window drives how long a payment stays in the submitted
-        state before the module may treat silence as a problem.
-      todo: 'TODO(human): How many banking days after collection is the response file guaranteed to be complete?'
 
   record_layout:
     reference: 'Acme Bureau file layout, section 4 (fixed-width debit record).'
     notes: >-
       Not modelled field by field here. The layout belongs in the provider doc;
       this spec records only that one exists and that it is fixed-width.
-    source:
-      kind: inferred
-      rationale: >-
-        The layout document has not been read yet. Recording the gap explicitly
-        is better than a half-remembered column list that generation would trust.
-      todo: 'TODO(human): Which column positions carry the user reference, amount and action date?'
-
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/16-WHEN-TO-DEVIATE.md § When to deviate
-    quote: >-
-      The per-payment `afterPaymentCreated` hook becomes a queue-and-flush
-      rather than a direct call. Document the flush trigger.
-    retrieved: '2026-10-19'
 
 status_reports:
   mechanism: response_file
@@ -194,13 +151,6 @@ status_reports:
           An interim code is what stops the module reading a not-yet-final line
           as a failure.
         todo: 'TODO(human): Does the bureau emit an interim pending code, or do records only appear once final?'
-
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/08-WEBHOOKS.md § WebhookParser pattern
-    quote: 'Different providers use different webhook payload structures:'
-    retrieved: '2026-10-19'
 
 status_map:
   - provider_status: pending_submission
@@ -267,12 +217,6 @@ config_fields:
     description: PEM private key used for SFTP key-pair authentication to the bureau.
     secret: true
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: code/services/config.service.ts § EnvironmentConfig
-      quote: 'providerExtraConfig?: Record<string, string>;'
-      retrieved: '2026-10-19'
 
   - name: providerSftpHost
     storage: extra
@@ -280,12 +224,6 @@ config_fields:
     example: sftp.example-bureau.test
     secret: false
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: code/services/config.service.ts § EnvironmentConfig
-      quote: "Example: Adyen's merchantAccount, GoCardless's environment mode, etc."
-      retrieved: '2026-10-19'
 
   - name: providerSecretKey
     storage: standard
@@ -295,14 +233,6 @@ config_fields:
     example: ACME00123
     secret: true
     required: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/16-WHEN-TO-DEVIATE.md § When NOT to deviate
-      quote: >-
-        Use `providerSecretKey`, `providerWebhookSigningSecret`, etc. — not
-        `stripeSecretKey`.
-      retrieved: '2026-10-19'
 
 lifecycle_hooks:
   renderCreatePaymentMethod:
@@ -311,12 +241,6 @@ lifecycle_hooks:
       account type. There is no provider-hosted page and no tokenisation step.
     idempotency: >-
       Pure render, no side effect. Safe to call any number of times.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/SPEC-TEMPLATE.md § 7. Lifecycle Hook Behaviour
-      quote: '| `renderCreatePaymentMethod` | Return HTML form for payment method capture |'
-      retrieved: '2026-10-19'
 
   createPaymentMethod:
     behaviour: >-
@@ -326,12 +250,6 @@ lifecycle_hooks:
     idempotency: >-
       Validation and storage only, no external call, so repeated invocations
       converge on the same stored payment method.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/SPEC-TEMPLATE.md § 7. Lifecycle Hook Behaviour
-      quote: '| `createPaymentMethod` | Validate and store tokenised payment method |'
-      retrieved: '2026-10-19'
 
   afterPolicyIssued:
     behaviour: >-
@@ -343,14 +261,6 @@ lifecycle_hooks:
       Root may redeliver this hook. Returning the same schedule_payment actions
       for the same billing periods is the intended behaviour; the platform owns
       the schedule and reconciles rather than appending duplicates.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/17-SCHEDULED-PAYMENTS.md § Actions
-      quote: >-
-        Actions are returned **as an array** from a lifecycle hook. Return `[]`
-        to schedule nothing, or several actions at once.
-      retrieved: '2026-10-19'
 
   afterPolicyCancelled:
     behaviour: >-
@@ -361,12 +271,6 @@ lifecycle_hooks:
     idempotency: >-
       Unscheduling an already-unscheduled payment is a no-op on the platform
       side, so a redelivered cancellation is safe.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/17-SCHEDULED-PAYMENTS.md § Actions
-      quote: 'payment-method removal — `unschedule_payment` to cancel future collections.'
-      retrieved: '2026-10-19'
 
 billing_settings:
   batching:
@@ -378,13 +282,6 @@ billing_settings:
     max_attempts: 2
     backoff_days: 3
     backoff_multiplier: 1
-  source:
-    kind: document
-    title: Collection module template
-    locator: docs/17-SCHEDULED-PAYMENTS.md § batching
-    quote: >-
-      Set ahead of your provider's cutoff to avoid spilling to the next day.
-    retrieved: '2026-10-19'
 
 error_scenarios:
   - scenario: The SFTP host refused the connection at submission time.
@@ -394,12 +291,6 @@ error_scenarios:
       without a successful upload, leave the payments scheduled rather than
       marking them failed, and alert.
     retryable: true
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/12-ERROR-HANDLING.md
-      quote: 'Wrap external calls in `retryWithBackoff`'
-      retrieved: '2026-10-19'
 
   - scenario: The response file contains a code that is not in the status map.
     module_error: ValidationError
@@ -408,14 +299,6 @@ error_scenarios:
       code with the payment reference, and alert so the code table can be
       extended deliberately.
     retryable: false
-    source:
-      kind: document
-      title: Collection module template
-      locator: AGENTS.md § Conventions
-      quote: >-
-        If the codebase or spec is ambiguous, leave a `TODO(human):` with a
-        specific question instead of guessing.
-      retrieved: '2026-10-19'
 
   - scenario: A debit record was rejected by the bureau at file level, before reaching the bank.
     provider_error_code: REJ
@@ -427,13 +310,6 @@ error_scenarios:
     retryable: false
     root_payment_status: failed
     failure_action: block_payment_method
-    source:
-      kind: inferred
-      rationale: >-
-        File-level rejection is distinct from an unpaid result and arrives on a
-        different channel, but the exact rejection codes come from the bureau's
-        file-layout document.
-      todo: 'TODO(human): Which file-level rejection codes exist, and do they arrive in the response file or a separate reject file?'
 
 deviations:
   - id: DEV-001
@@ -452,14 +328,6 @@ deviations:
       This provider has no webhooks; webhook-hooks.ts stays a stub and state is
       reconciled from the daily response file instead. Flagging it so a reviewer
       can challenge the scheduled-read approach.
-    source:
-      kind: document
-      title: Collection module template
-      locator: docs/16-WHEN-TO-DEVIATE.md § When to deviate
-      quote: >-
-        **Providers without webhooks.** If the provider only supports polling,
-        skip `08-WEBHOOKS.md` entirely.
-      retrieved: '2026-10-19'
 
   - id: DEV-002
     rule: provider_interface
@@ -479,15 +347,6 @@ deviations:
       Batch assembly does not implement PaymentProviderService because no method
       on it fits. Worth deciding whether the interface should grow a batch slot
       or whether batch providers stay outside it.
-    source:
-      kind: document
-      title: Collection module template
-      locator: code/interfaces/provider.interfaces.ts § PaymentProviderService
-      quote: |-
-          createPaymentIntent(
-            params: CreatePaymentIntentParams
-          ): Promise<ProviderPaymentIntent>;
-      retrieved: '2026-10-19'
 
 notes: >-
   What this example is for. Diff it against stripe.spec.yaml. Everything present

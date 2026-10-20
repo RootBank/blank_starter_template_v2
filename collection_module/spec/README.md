@@ -43,13 +43,23 @@ and changing one of those files should change the schema:
 | `billing_settings` | `billingSettings` in `docs/17-SCHEDULED-PAYMENTS.md` |
 | `deviations[].rule` | the rules in `docs/16-WHEN-TO-DEVIATE.md` |
 
-## Every extracted block carries a `source`
+## Blocks where a wrong value costs money carry a `source`
 
 "Do not invent semantics" is a rule in `CLAUDE.md` that nothing enforced. Here it
-is a validation failure: every block recording a fact about the provider —
-`provider`, `integration`, `auth`, `idempotency`, `api.base_urls`, each endpoint,
-each webhook event, each status-map row, each config field, each lifecycle hook,
-each error scenario — must say where the fact came from.
+is a validation failure, on the blocks where being wrong is expensive:
+
+| Block | Why it is mandatory |
+|---|---|
+| `auth` | Wrong and nothing connects, or a credential goes somewhere it should not. |
+| `idempotency` | Wrong and a retry charges a policyholder twice. |
+| `status_map[]` | Wrong and a payment is marked paid when it was not, or a card is blocked that should not be. |
+| `status_reports.codes[]` | The input to the status map for a file-based provider. Same consequence. |
+| `webhooks.signature` | Wrong and either every webhook is rejected, or an unverified payload is acted on. |
+
+Every other block *may* carry a `source`, and it is validated the same way when
+present — the rules below do not change. It is simply not forced. Cite anything
+you had to look up; the cost of being wrong about an endpoint's SDK call is a
+failing test, not a wrong payment.
 
 Three kinds:
 
