@@ -1,0 +1,178 @@
+# Test fixture, not documentation. A minimal provider of the shape the
+# template assumes by default: HTTP client, synchronous charge, status by
+# webhook. Deliberately generic — no real provider is described here.
+#
+# Paired with batch-file.fixture.yaml, which is the opposite shape. Between
+# them they are the evidence that the schema is not built around one shape.
+
+spec_version: 1
+
+provider:
+  name: Example Sync Provider
+  slug: example-sync
+  api_docs_url: https://docs.example-sync.test/reference
+  doc_hosts: [docs.example-sync.test]
+  api_type: http
+
+integration:
+  collection_model: api_sync
+  status_source: webhook
+  currencies: [ZAR]
+  amount_unit: minor
+
+auth:
+  type: bearer
+  header: Authorization
+  format: 'Bearer {providerSecretKey}'
+  config_key: providerSecretKey
+  source:
+    kind: web
+    url: https://docs.example-sync.test/reference/authentication
+    section: Authentication
+    quote: 'Authenticate every request with a bearer token in the Authorization header.'
+    retrieved: '2026-10-19'
+
+idempotency:
+  required: true
+  mechanism: header
+  header: Idempotency-Key
+  key_source: root_payment_id
+  source:
+    kind: web
+    url: https://docs.example-sync.test/reference/idempotency
+    section: Idempotent requests
+    quote: 'Supply an Idempotency-Key header so a retried request cannot charge twice.'
+    retrieved: '2026-10-19'
+
+api:
+  base_urls:
+    sandbox: https://sandbox-api.example-sync.test
+    production: https://api.example-sync.test
+
+endpoints:
+  - operation: createPayment
+    maps_to_interface: createPaymentIntent
+    method: POST
+    path: /payments
+    returns: payment
+    provider_statuses: [succeeded, declined]
+
+  - operation: getPayment
+    maps_to_interface: none
+    method: GET
+    path: /payments/{id}
+    returns: payment
+    deviation_ref: DEV-001
+
+webhooks:
+  signature:
+    header: X-Example-Signature
+    algorithm: hmac_sha256
+    scheme: raw_body_hmac
+    secret_config_key: providerWebhookSigningSecret
+    timestamp_tolerance_seconds: 300
+    source:
+      kind: web
+      url: https://docs.example-sync.test/reference/webhooks
+      section: Verifying signatures
+      quote: 'Each webhook carries an HMAC-SHA256 signature of the raw request body.'
+      retrieved: '2026-10-19'
+
+  payload:
+    shape: flat
+    content_type: application/json
+    event_type_path: type
+    reference_path: data.id
+    status_path: data.status
+
+  events:
+    - name: payment.succeeded
+      trigger: The payment completed and settled.
+      provider_status: succeeded
+      applies_to: payment
+      root_action:
+        kind: update_payment_status
+        payment_status: successful
+
+    - name: payment.declined
+      trigger: The issuer refused the payment.
+      provider_status: declined
+      applies_to: payment
+      root_action:
+        kind: update_payment_status
+        payment_status: failed
+        failure_action: block_retry
+
+    - name: payment.reviewed
+      trigger: A payment was flagged for manual review.
+      root_action:
+        kind: ignore
+        notes: Review is an internal provider workflow with no Root-side consequence.
+
+status_map:
+  - provider_status: succeeded
+    applies_to: payment
+    root_status: successful
+    terminal: true
+    source:
+      kind: web
+      url: https://docs.example-sync.test/reference/payment-statuses
+      section: Payment statuses
+      quote: 'succeeded - the payment has been captured and settled.'
+      retrieved: '2026-10-19'
+
+  - provider_status: declined
+    applies_to: payment
+    root_status: failed
+    failure_action: block_retry
+    terminal: true
+    source:
+      kind: web
+      url: https://docs.example-sync.test/reference/payment-statuses
+      section: Payment statuses
+      quote: 'declined - the issuer refused the payment and it will not settle.'
+      retrieved: '2026-10-19'
+
+config_fields:
+  - name: providerSecretKey
+    storage: standard
+    description: Secret API key used to authenticate requests.
+    example: sk_test_xxx
+    secret: true
+    required: true
+
+  - name: providerWebhookSigningSecret
+    storage: standard
+    description: Secret used to verify inbound webhook signatures.
+    example: whsec_xxx
+    secret: true
+    required: true
+
+lifecycle_hooks:
+  afterPaymentCreated:
+    behaviour: Charge the stored payment method for the Root payment amount.
+    provider_operations: [createPayment]
+    idempotency: >-
+      Sends the Root payment id as the Idempotency-Key, so a redelivered hook
+      replays the first response instead of charging again.
+
+error_scenarios:
+  - scenario: The provider rejected the request as unauthenticated.
+    http_status: 401
+    module_error: ValidationError
+    handling: Fail fast and alert; the configured key is wrong or revoked.
+    retryable: false
+
+deviations:
+  - id: DEV-001
+    rule: provider_interface
+    summary: PaymentProviderService has no method for reading a single payment back.
+    rationale: >-
+      Reconciliation needs to re-read a payment, and the interface has no
+      getPayment. Recorded rather than widening the interface quietly.
+    code_marker: 'DEVIATION: getPayment has no PaymentProviderService equivalent; used only by reconciliation.'
+    files: [code/services/provider.service.ts]
+    provider_doc: 'docs/providers/example-sync.md#deviations-from-template'
+    pr_note: >-
+      getPayment is outside PaymentProviderService because no method on it fits
+      a single-payment read.

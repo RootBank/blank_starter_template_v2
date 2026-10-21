@@ -1,0 +1,344 @@
+# Provider spec template
+#
+#   cp spec/provider.spec.template.yaml spec/<your-provider>.spec.yaml
+#   npm run spec:validate
+#
+# Fill in every <ANGLE_BRACKET> placeholder and delete the blocks that do not
+# apply to your provider. The template deliberately does NOT validate while the
+# placeholders are still in it, so a half-filled spec cannot pass as a real one.
+# Validate it directly to see what is still outstanding:
+#
+#   npm run spec:validate -- spec/provider.spec.template.yaml
+#
+# Which blocks apply depends on three choices in `integration` and `provider`
+# below. Delete what the choice rules out; spec:validate will tell you if you
+# delete something you still need.
+#
+#   provider.api_type: sdk | http   -> keep `api` and `endpoints`
+#   provider.api_type: file         -> delete `api` and `endpoints`, keep `file_exchange`
+#   integration.status_source: webhook        -> keep `webhooks`, delete `status_reports`
+#   integration.status_source: response_file  -> delete `webhooks`, keep `status_reports`
+#   integration.status_source: polling        -> delete `webhooks`, keep `status_reports`
+#   integration.collection_model: batch_file  -> keep `file_exchange` and `billing_settings`
+#
+# If your provider fits none of the listed values for a provider-side field,
+# most of them accept `other` plus a notes field. Reach for that rather than
+# forcing a bad fit. Root-side vocabularies (root_status, failure_action, hook
+# names, module_error) are closed on purpose: they are pinned to real code.
+
+spec_version: 1
+
+# ---------------------------------------------------------------------------
+# Who the provider is.
+# ---------------------------------------------------------------------------
+provider:
+  name: <Provider Name>
+  slug: <provider-slug>                 # lower-kebab; names docs/providers/<slug>.md
+  website: https://<provider-website>
+  api_docs_url: https://<provider-docs>/<path>
+  # Hosts a `web` citation is allowed to come from. Required once you cite any
+  # web page. Declaring it up front is what stops a citation drifting to a
+  # host nobody chose.
+  doc_hosts: [<provider-docs-host>]
+  api_type: <sdk|http|file>             # sdk = official client library
+  sdk_package: <npm-package>            # required when api_type is sdk, else delete
+  api_version: '<api-version>'          # quote it, or YAML reads a date as a date
+
+# ---------------------------------------------------------------------------
+# The shape of the integration. These three fields decide which blocks below
+# apply, so get them right before filling anything else in.
+# ---------------------------------------------------------------------------
+integration:
+  # api_sync   = the charge resolves on the call
+  # api_async  = the charge is accepted now and settles later
+  # batch_file = payments accumulate and are submitted as a file
+  collection_model: <api_sync|api_async|batch_file>
+  # How the module finds out whether a payment succeeded.
+  status_source: <webhook|response_file|polling>
+  currencies: [<ZAR>]
+  amount_unit: <minor|major>            # minor = cents. Root sends minor units.
+  supports_refunds: <true|false>
+
+# ---------------------------------------------------------------------------
+# Credentials. Top level, not under `api`: a file-based provider has
+# credentials too. MANDATORY CITATION.
+# ---------------------------------------------------------------------------
+auth:
+  type: <api_key|bearer|basic|hmac|oauth2|mtls|sftp_key|none|other>
+  header: <Header-Name>                 # required for api_key/bearer/basic/hmac
+  format: 'Bearer {providerSecretKey}'  # the config field goes in braces
+  config_key: providerSecretKey         # must be declared in config_fields below
+  notes: >-
+    <Anything a reader needs that the fields above do not say. Required when
+    type is other, mtls or sftp_key.>
+  source:
+    kind: <web|document|inferred>
+    url: https://<provider-docs>/<page-stating-this>
+    section: <Heading on that page>
+    quote: >-
+      <A verbatim sentence from that page stating how authentication works.
+      Must be at least 20 characters and more than one word.>
+    retrieved: '<YYYY-MM-DD>'
+
+# ---------------------------------------------------------------------------
+# How a retry avoids charging twice. docs/16-WHEN-TO-DEVIATE.md lists this as a
+# never-deviate rule, so it must be stated rather than implied.
+# MANDATORY CITATION.
+# ---------------------------------------------------------------------------
+idempotency:
+  required: true
+  # header        = an idempotency header on the request
+  # body_field    = a field in the request body
+  # natural_key   = the provider dedupes on a reference you supply
+  # provider_native = the operation is idempotent by nature
+  mechanism: <header|body_field|natural_key|provider_native|none>
+  header: <Idempotency-Key>             # required when mechanism is header
+  field: <reference>                    # required when mechanism is body_field
+  key_source: <root_payment_id|root_policy_id|root_payment_method_id|composite>
+  notes: >-
+    <What happens on the provider's side when the same key arrives twice.>
+  source:
+    kind: <web|document|inferred>
+    url: https://<provider-docs>/<page-stating-this>
+    section: <Heading on that page>
+    quote: >-
+      <A verbatim sentence stating the idempotency behaviour.>
+    retrieved: '<YYYY-MM-DD>'
+
+# ---------------------------------------------------------------------------
+# HTTP transport. DELETE THIS BLOCK when api_type is file.
+# ---------------------------------------------------------------------------
+api:
+  base_urls:
+    # The host the module calls. NOT the documentation host — validation
+    # rejects docs./developer./support. hosts and documentation path segments,
+    # because deriving the API host from the docs URL is a known way to bake a
+    # wrong base URL into a generated client.
+    sandbox: https://<api-host>
+    production: https://<api-host>
+  rate_limit:
+    requests_per_second: <10>
+    retry_after_header: <Retry-After>
+    notes: <What the provider does when you exceed it.>
+
+# ---------------------------------------------------------------------------
+# One entry per operation the module performs. DELETE when api_type is file.
+# An http provider declares method + path; an sdk provider declares sdk_call,
+# because that is what the generated client will actually contain.
+# ---------------------------------------------------------------------------
+endpoints:
+  - operation: <createCustomer>         # camelCase; hooks refer to this name
+    maps_to_interface: <createCustomer> # or `none` + a deviation_ref, if the
+                                        # interface has no method that fits
+    method: <POST>                      # http providers
+    path: /<path>                       # http providers
+    sdk_call: <customers.create>        # sdk providers
+    returns: <customer>                 # the provider object this returns
+    request_notes: <Fields that matter and why.>
+    provider_statuses: [<status-a>, <status-b>]   # must all appear in status_map
+
+# ---------------------------------------------------------------------------
+# DELETE THIS BLOCK unless status_source is webhook.
+# ---------------------------------------------------------------------------
+webhooks:
+  endpoint_path: /<your-receiving-path>
+
+  # MANDATORY CITATION: getting this wrong means either rejecting every webhook
+  # or acting on an unverified payload.
+  signature:
+    header: <X-Provider-Signature>
+    algorithm: <hmac_sha256|hmac_sha1|hmac_sha512|rsa_sha256|ed25519|jws|basic_auth|none|other>
+    scheme: <sdk_verified|raw_body_hmac|field_concat_hmac|header_token|other>
+    secret_config_key: providerWebhookSigningSecret
+    timestamp_header: <X-Provider-Timestamp>
+    timestamp_tolerance_seconds: <300>
+    signed_payload_notes: >-
+      <Exactly what bytes are signed. Required when scheme or algorithm is
+      other, or when scheme is field_concat_hmac.>
+    source:
+      kind: <web|document|inferred>
+      url: https://<provider-docs>/<webhook-signature-page>
+      section: <Heading on that page>
+      quote: >-
+        <A verbatim sentence stating how the signature is produced.>
+      retrieved: '<YYYY-MM-DD>'
+
+  payload:
+    # flat         { type, data: { object } }
+    # batched      { items: [ { ... }, ... ] }
+    # wrapped      { events: [ { ... }, ... ] }
+    # form_encoded id=123&status=COMPLETE
+    # other        anything else — describe it in delivery_notes
+    shape: <flat|batched|wrapped|form_encoded|other>
+    content_type: <application/json>
+    events_path: <events>               # required for batched and wrapped
+    event_type_path: <type>             # dot path, relative to one event
+    reference_path: <data.object.id>    # the provider id the event is about
+    status_path: <data.object.status>
+    delivery_notes: >-
+      <Ordering guarantees, redelivery behaviour, anything a parser must know.>
+
+  # Every event you subscribe to needs a Root-side action. An event with no
+  # action is an event nobody wired up.
+  events:
+    - name: <provider.event.name>
+      trigger: <What happens on the provider's side to cause this.>
+      provider_status: <status>         # must appear in status_map
+      applies_to: <provider-object>     # only when one status word is reused
+      root_action:
+        # update_payment_status | cancel_policy | update_policy_app_data
+        # reconcile_payment_method | ignore | custom
+        kind: <update_payment_status>
+        payment_status: <submitted|pending|processing|successful|failed|cancelled>
+        failure_action: <block_payment_method|block_retry|allow_retry>
+        notes: <Required when kind is custom or ignore.>
+
+# ---------------------------------------------------------------------------
+# DELETE THIS BLOCK unless collection_model is batch_file.
+# The template has no file-transport abstraction, so a spec using this block
+# needs a deviation with rule: provider_interface.
+# ---------------------------------------------------------------------------
+file_exchange:
+  submission:
+    transport: <sftp|ftps|https|s3|other>
+    host_config_key: <providerSftpHost>   # declare it in config_fields
+    path_pattern: '/<outgoing>/<PATTERN>'
+    format: <fixed_width|csv|xml|json|pain_001|other>
+    cutoff_time_utc: '<HH:MM>'
+    max_records_per_file: <5000>
+    notes: <Required when transport or format is other.>
+  response:
+    transport: <sftp|ftps|https|s3|other>
+    path_pattern: '/<incoming>/<PATTERN>'
+    format: <fixed_width|csv|xml|json|pain_001|other>
+    available_after: <When the provider guarantees it is complete.>
+  record_layout:
+    reference: <Name and section of the layout document.>
+    notes: <Not modelled field by field here. Put the columns in the provider doc.>
+
+# ---------------------------------------------------------------------------
+# DELETE THIS BLOCK when status_source is webhook.
+# ---------------------------------------------------------------------------
+status_reports:
+  mechanism: <response_file|polling>
+  schedule: <When the module looks for an update.>
+  poll_operation: <getPayment>          # required when mechanism is polling
+  # MANDATORY CITATION on every code: this table decides whether a
+  # policyholder is marked paid.
+  codes:
+    - code: '<00>'
+      meaning: <What the provider means by it.>
+      provider_status: <settled>        # must appear in status_map
+      applies_to: <response_file_code>
+      source:
+        kind: <web|document|inferred>
+        title: <Name of the document stating the code table.>
+        locator: <Section or page within it.>
+        quote: >-
+          <A verbatim line from the code table.>
+        retrieved: '<YYYY-MM-DD>'
+
+# ---------------------------------------------------------------------------
+# Provider status -> Root PaymentStatus. Every provider status named anywhere
+# in this file must have a row here. MANDATORY CITATION on every row: this is
+# where a wrong value marks an unpaid policyholder paid.
+# ---------------------------------------------------------------------------
+status_map:
+  - provider_status: <provider-status>
+    applies_to: <provider-object>       # e.g. payment, invoice, response_file_code
+    root_status: <submitted|pending|processing|successful|failed|cancelled>
+    failure_action: <block_payment_method|block_retry|allow_retry>  # required when failed
+    terminal: <true|false>
+    source:
+      kind: <web|document|inferred>
+      url: https://<provider-docs>/<page-listing-statuses>
+      section: <Heading on that page>
+      quote: >-
+        <A verbatim line stating what this status means.>
+      retrieved: '<YYYY-MM-DD>'
+
+# ---------------------------------------------------------------------------
+# Config this module needs. `standard` names must be one of the four fields
+# EnvironmentConfig declares; anything else is `extra` and lands in
+# providerExtraConfig. Never introduce a provider-named key.
+# ---------------------------------------------------------------------------
+config_fields:
+  - name: providerSecretKey
+    storage: standard                   # standard | extra
+    description: <What this credential is.>
+    example: <redacted-example>
+    secret: true
+    required: true
+
+# ---------------------------------------------------------------------------
+# What the module does at each Root lifecycle event. Only the hooks this
+# provider actually implements. Keys must be real exports of
+# code/lifecycle-hooks/index.ts.
+# ---------------------------------------------------------------------------
+lifecycle_hooks:
+  afterPolicyIssued:
+    behaviour: >-
+      <What this hook does, in terms a reviewer can check against the code.>
+    provider_operations: [<createCustomer>]   # must name endpoints above
+    actions: [<schedule_payment>]             # scheduled-payment actions, if any
+    idempotency: >-
+      <How a redelivery of this hook avoids a duplicate side effect. Root may
+      retry; this field is not optional thinking.>
+
+# ---------------------------------------------------------------------------
+# DELETE unless a hook above returns scheduling actions.
+# Mirrors billingSettings in root.config.json. See docs/17-SCHEDULED-PAYMENTS.md.
+# ---------------------------------------------------------------------------
+billing_settings:
+  batching:
+    # true  -> you submit via your own hook
+    # false -> the platform batcher submits a file (required for batch_file)
+    enabled: <true|false>
+    submit_payments_function: <submitPayments>   # required when enabled is true
+    submit_batch_size: <100>
+    schedule_time_utc: '<05:00>'
+    submission_lead_time: <2>
+    latest_submission_time_utc: '<13:30>'        # set ahead of the provider cutoff
+  retry:
+    max_attempts: <2>
+    backoff_days: <3>
+    backoff_multiplier: <1>
+
+# ---------------------------------------------------------------------------
+# Known failure cases and what the module does about them.
+# ---------------------------------------------------------------------------
+error_scenarios:
+  - scenario: <What went wrong.>
+    provider_error_code: <code>
+    http_status: <402>
+    # The EnhancedModuleError subclass thrown at the service boundary.
+    module_error: <ValidationError|NotFoundError|NetworkError|TimeoutError|RateLimitError|ServerError|EnhancedModuleError>
+    handling: <What the module does, specifically.>
+    retryable: <true|false>
+    root_payment_status: <failed>
+    failure_action: <block_retry>
+
+# ---------------------------------------------------------------------------
+# Every departure from the template's defaults. docs/16-WHEN-TO-DEVIATE.md
+# requires a deviation in three places — a code comment, the provider doc and
+# the PR — so all three are fields here and can be cross-checked later.
+#
+# Two are not optional:
+#   no `webhooks` block   -> you need one with rule: webhooks
+#   api_type: file        -> you need one with rule: provider_interface
+#
+# DELETE the block entirely if you are not deviating.
+# ---------------------------------------------------------------------------
+deviations:
+  - id: DEV-001
+    rule: <webhooks|provider_interface|lifecycle_hook_ordering|idempotency|di_tokens|config_naming|error_mapping|logging|adapter_shape|other>
+    summary: <One line.>
+    rationale: <Why the template's default genuinely does not work here.>
+    code_marker: 'DEVIATION: <the verbatim text of the // DEVIATION: comment in the code>'
+    files: [<code/services/your-file.ts>]
+    provider_doc: 'docs/providers/<provider-slug>.md#deviations-from-template'
+    pr_note: <The sentence to put in the PR description so a reviewer can challenge it.>
+
+notes: >-
+  <Anything that does not belong to a block above. Never load-bearing for
+  generation.>
