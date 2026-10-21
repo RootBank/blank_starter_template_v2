@@ -37,7 +37,7 @@ Options:
   -h, --help    show this message
 
 With no file arguments, every *.spec.yaml under collection_module/spec is
-validated.
+validated. provider.spec.template.yaml is skipped unless you name it.
 `.trim();
 
 function parseArgs(argv) {
@@ -62,7 +62,14 @@ function findSpecs(dir) {
     if (entry.isDirectory()) {
       if (entry.name === 'lib') continue;
       out.push(...findSpecs(full));
-    } else if (entry.name.endsWith('.spec.yaml') || entry.name.endsWith('.spec.yml')) {
+    } else if (
+      (entry.name.endsWith('.spec.yaml') || entry.name.endsWith('.spec.yml'))
+      // The template is not a spec. It is full of placeholders by design, so
+      // validating it on every run would be noise. Pass it explicitly to see
+      // what a filled-in copy still owes.
+      && !entry.name.endsWith('.template.yaml')
+      && !entry.name.endsWith('.template.yml')
+    ) {
       out.push(full);
     }
   }
@@ -98,13 +105,26 @@ function main() {
     files = findSpecs(SPEC_ROOT);
   }
   if (files.length === 0) {
-    process.stderr.write('No *.spec.yaml files found.\n');
-    return 2;
+    // A freshly cloned template has no provider yet. Say so plainly rather
+    // than failing; it is stated loudly so it cannot read as a silent pass.
+    process.stdout.write(
+      'No provider specs found — 0 validated.\n'
+        + 'Copy spec/provider.spec.template.yaml to spec/<provider>.spec.yaml to start one.\n',
+    );
+    return 0;
   }
 
   const missing = files.filter((file) => !fs.existsSync(file));
   if (missing.length) {
     process.stderr.write(`No such file: ${missing.map(relative).join(', ')}\n`);
+    return 2;
+  }
+
+  // A named directory is read as "every spec under here" rather than crashing
+  // on an attempt to read a directory as a file.
+  files = files.flatMap((file) => (fs.statSync(file).isDirectory() ? findSpecs(file) : [file]));
+  if (files.length === 0) {
+    process.stderr.write('No *.spec.yaml files in the given directory.\n');
     return 2;
   }
 

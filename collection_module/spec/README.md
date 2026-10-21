@@ -14,22 +14,51 @@ npm run spec:validate -- --help
 
 Exit codes: `0` clean, `1` findings, `2` bad usage.
 
+Start by copying the template:
+
+```bash
+cp spec/provider.spec.template.yaml spec/<your-provider>.spec.yaml
+npm run spec:validate
+```
+
+The template does not validate while its `<PLACEHOLDER>` markers are still in
+it, so a half-filled spec cannot pass as a real one. Validate it directly
+(`npm run spec:validate -- spec/provider.spec.template.yaml`) to see the
+outstanding fields as a checklist.
+
 ## Layout
 
 | Path | What it is |
 |---|---|
+| `provider.spec.template.yaml` | Copy this. Every block, every placeholder, no provider named. |
 | `provider.schema.json` | JSON Schema (draft-07). The field vocabulary. |
-| `examples/stripe.spec.yaml` | SDK, synchronous charge, webhook status. The template's default shape. |
-| `examples/acme-debit-bureau.spec.yaml` | Batch file, SFTP, no webhooks, status by response file. The shape that breaks the default. |
 | `lib/` | The validator. No runtime dependencies — see *Dependencies* below. |
 
-Read both examples before writing a spec. The second one exists because a schema
-designed against Stripe alone encodes Stripe's shape as universal.
+Two filled-in specs of deliberately opposite shapes live in
+`__tests__/spec/fixtures/` — one HTTP-and-webhooks, one batch-file-and-SFTP.
+They are test data rather than documentation, and they exist so that the schema
+is checked against more than one provider shape. Read them if the template's
+comments leave you unsure what a filled-in block looks like.
 
-## The vocabulary is pinned to the code
+## Which blocks apply
 
-Enumerated values are not opinions; each one is taken from a file in this repo,
-and changing one of those files should change the schema:
+Three fields decide the rest of the file. Delete what they rule out:
+
+| If | Then |
+|---|---|
+| `provider.api_type: sdk` or `http` | keep `api` and `endpoints` |
+| `provider.api_type: file` | delete `api` and `endpoints`, keep `file_exchange` |
+| `integration.status_source: webhook` | keep `webhooks`, delete `status_reports` |
+| `integration.status_source: response_file` or `polling` | delete `webhooks`, keep `status_reports` |
+| `integration.collection_model: batch_file` | keep `file_exchange` and `billing_settings` |
+
+Validation enforces every row of that table, so a spec cannot half-describe two
+shapes at once.
+
+## Two kinds of enumerated value
+
+**Root-side vocabularies are closed.** Each is taken from a file in this repo,
+and changing that file should change the schema:
 
 | Schema field | Source of truth |
 |---|---|
@@ -38,10 +67,18 @@ and changing one of those files should change the schema:
 | `lifecycle_hooks` keys | exports of `code/lifecycle-hooks/index.ts` |
 | `config_fields[].name` where `storage: standard` | `EnvironmentConfig` in `code/services/config.service.ts` |
 | `endpoints[].maps_to_interface` | `PaymentProviderService` / `PaymentProviderClient` in `code/interfaces/provider.interfaces.ts` |
-| `webhooks.payload.shape` | the four payload shapes in `docs/08-WEBHOOKS.md` |
 | `error_scenarios[].module_error` | `EnhancedModuleError` subclasses in `code/utils/error-types.ts` |
 | `billing_settings` | `billingSettings` in `docs/17-SCHEDULED-PAYMENTS.md` |
 | `deviations[].rule` | the rules in `docs/16-WHEN-TO-DEVIATE.md` |
+
+**Provider-side vocabularies are open.** `auth.type`,
+`webhooks.signature.algorithm`, `webhooks.signature.scheme`,
+`webhooks.payload.shape`, `file_exchange.*.transport` and
+`file_exchange.*.format` all accept `other`, which requires a notes field
+describing what the provider actually does. The listed values are what has been
+seen — the four payload shapes in `docs/08-WEBHOOKS.md` are four observed
+providers, not a law. A provider that fits none of them should be described, not
+blocked, and certainly not forced into the nearest wrong value.
 
 ## Blocks where a wrong value costs money carry a `source`
 
@@ -64,20 +101,20 @@ failing test, not a wrong payment.
 Three kinds:
 
 ```yaml
-source:                                   # a documentation page
+source:                                      # a documentation page
   kind: web
-  url: https://docs.stripe.com/webhooks   # host must be in provider.doc_hosts
-  section: Verify events are sent from Stripe
-  quote: Stripe signs every webhook event by including a signature in the `Stripe-Signature` header.
+  url: https://docs.<provider>.com/webhooks  # host must be in provider.doc_hosts
+  section: Verifying webhook signatures
+  quote: Every webhook carries an HMAC-SHA256 signature of the raw request body.
   retrieved: '2026-10-19'
 ```
 
 ```yaml
 source:                                   # a PDF, an onboarding pack, a file in this repo
   kind: document
-  title: Collection module template
-  locator: docs/STRIPE-REFERENCE.md § Status Mapping
-  quote: '| `paid` | `PaymentStatus.Successful` |'
+  title: <Provider> file layout
+  locator: Section 6, Response codes
+  quote: '00 - the debit was accepted and funds have settled.'
   retrieved: '2026-10-19'
 ```
 
@@ -118,11 +155,11 @@ them. The `deviations` block holds all three as fields:
 deviations:
   - id: DEV-001
     rule: webhooks
-    summary: The bureau sends no webhooks.
+    summary: The provider sends no webhooks.
     rationale: …
     code_marker: 'DEVIATION: Provider has no webhooks. Scheduled reader at …'
     files: [code/services/response-file.service.ts]
-    provider_doc: 'docs/providers/acme-debit-bureau.md#deviations-from-template'
+    provider_doc: 'docs/providers/<provider-slug>.md#deviations-from-template'
     pr_note: …
 ```
 
@@ -141,9 +178,10 @@ because `PaymentProviderService` has no file-exchange method.
   across two provider objects, the reference must say which with `applies_to`.
 - A base URL is an API host: not the host of `api_docs_url`, not a host in
   `doc_hosts`, not `docs.`/`developer.`/`support.`, and with no documentation path
-  segment. (`scripts/scaffold-provider.js` derives the base URL from the docs URL
-  host, which is how `developer.gocardless.com` ends up baked into a generated
-  client. This check is where that stops being possible.)
+  segment. (`scripts/scaffold-provider.js` derives the base URL from the API docs
+  URL's host, so a provider whose docs live at `developer.<provider>.com` gets
+  that host baked into its generated client instead of its real API host. This
+  check is where that stops being possible.)
 - Config keys referenced by `auth`, `webhooks.signature` and `file_exchange` are
   declared in `config_fields`; hooks only call operations that exist in `endpoints`;
   `deviation_ref` resolves.

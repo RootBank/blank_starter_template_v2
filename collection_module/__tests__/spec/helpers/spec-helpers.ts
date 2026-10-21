@@ -38,16 +38,23 @@ export const schemaLib = require(path.join(SPEC_DIR, 'lib', 'schema-validator.js
 };
 /* eslint-enable @typescript-eslint/no-var-requires */
 
-/** The date every example was authored against, so tests never depend on today. */
+/** The date the fixtures were authored against, so tests never depend on today. */
 export const AS_OF = '2026-10-19';
 
-export const EXAMPLES = {
-  stripe: path.join(SPEC_DIR, 'examples', 'stripe.spec.yaml'),
-  bureau: path.join(SPEC_DIR, 'examples', 'acme-debit-bureau.spec.yaml'),
+export const TEMPLATE = path.join(SPEC_DIR, 'provider.spec.template.yaml');
+
+/**
+ * Two deliberately opposite provider shapes. They are fixtures, not examples:
+ * generic by design, and not shipped as documentation. Between them they are
+ * the evidence that the schema is not built around a single provider shape.
+ */
+export const FIXTURES = {
+  sync: path.join(__dirname, '..', 'fixtures', 'http-webhook.fixture.yaml'),
+  batch: path.join(__dirname, '..', 'fixtures', 'batch-file.fixture.yaml'),
 };
 
-export function loadExample(name: keyof typeof EXAMPLES): any {
-  return yamlLib.parseSpecYaml(fs.readFileSync(EXAMPLES[name], 'utf8')).value;
+export function loadFixture(name: keyof typeof FIXTURES): any {
+  return yamlLib.parseSpecYaml(fs.readFileSync(FIXTURES[name], 'utf8')).value;
 }
 
 export function validate(spec: unknown, options: Record<string, unknown> = {}): Result {

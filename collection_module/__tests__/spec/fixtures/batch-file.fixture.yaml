@@ -1,0 +1,221 @@
+# Test fixture, not documentation. A minimal provider of the shape the
+# template does NOT assume: no API, no webhooks, payments submitted as a file
+# and outcomes read back from a response file days later.
+#
+# Paired with http-webhook.fixture.yaml. This one is what stops the schema
+# quietly encoding synchronous, webhook-driven collection as universal.
+
+spec_version: 1
+
+provider:
+  name: Example Batch Provider
+  slug: example-batch
+  api_type: file
+
+integration:
+  collection_model: batch_file
+  status_source: response_file
+  currencies: [ZAR]
+  amount_unit: minor
+  supports_refunds: false
+
+auth:
+  type: sftp_key
+  config_key: providerSftpPrivateKey
+  notes: >-
+    Key-pair authentication to the provider's SFTP host. There is no bearer
+    token and no per-request credential: the connection is the authentication.
+  source:
+    kind: document
+    title: Example Batch Provider onboarding pack
+    locator: Section 2, Connectivity
+    quote: 'Connections are authenticated with an SSH key pair registered during onboarding.'
+    retrieved: '2026-10-19'
+
+idempotency:
+  required: true
+  mechanism: natural_key
+  key_source: root_payment_id
+  notes: >-
+    The Root payment id is written into the user reference field of each
+    record, and the provider deduplicates on it, so a resubmitted file does
+    not debit twice.
+  source:
+    kind: document
+    title: Example Batch Provider file layout
+    locator: Section 4, User reference
+    quote: 'Records sharing a user reference within 30 days are rejected as duplicates.'
+    retrieved: '2026-10-19'
+
+file_exchange:
+  submission:
+    transport: sftp
+    host_config_key: providerSftpHost
+    path_pattern: '/outgoing/BATCH-{YYYYMMDD}.txt'
+    format: fixed_width
+    cutoff_time_utc: '14:00'
+    max_records_per_file: 5000
+  response:
+    transport: sftp
+    host_config_key: providerSftpHost
+    path_pattern: '/incoming/RESP-{YYYYMMDD}.txt'
+    format: fixed_width
+    available_after: Two banking days after the collection date.
+  record_layout:
+    reference: Example Batch Provider file layout, section 4.
+    notes: Column positions live in the provider doc, not in this spec.
+
+status_reports:
+  mechanism: response_file
+  schedule: Daily at 06:00 UTC, reading the previous banking day's response file.
+  codes:
+    - code: '00'
+      meaning: Accepted and settled.
+      provider_status: settled
+      applies_to: response_file_code
+      source:
+        kind: document
+        title: Example Batch Provider file layout
+        locator: Section 6, Response codes
+        quote: '00 - the debit was accepted and funds have settled.'
+        retrieved: '2026-10-19'
+
+    - code: '04'
+      meaning: Unpaid, insufficient funds in the account.
+      provider_status: unpaid_insufficient_funds
+      applies_to: response_file_code
+      source:
+        kind: document
+        title: Example Batch Provider file layout
+        locator: Section 6, Response codes
+        quote: '04 - the account held insufficient funds on the action date.'
+        retrieved: '2026-10-19'
+
+    - code: '10'
+      meaning: Unpaid, the account is closed.
+      provider_status: unpaid_account_closed
+      applies_to: response_file_code
+      source:
+        kind: inferred
+        rationale: >-
+          A closed account must block the payment method rather than retry, and
+          the code table has not been confirmed against the provider's own list.
+        todo: 'TODO(human): Which response codes are permanent account failures that must block the payment method?'
+
+status_map:
+  - provider_status: settled
+    applies_to: response_file_code
+    root_status: successful
+    terminal: true
+    source:
+      kind: document
+      title: Example Batch Provider file layout
+      locator: Section 6, Response codes
+      quote: '00 - the debit was accepted and funds have settled.'
+      retrieved: '2026-10-19'
+
+  - provider_status: unpaid_insufficient_funds
+    applies_to: response_file_code
+    root_status: failed
+    failure_action: allow_retry
+    terminal: false
+    source:
+      kind: document
+      title: Example Batch Provider file layout
+      locator: Section 6, Response codes
+      quote: '04 - the account held insufficient funds on the action date.'
+      retrieved: '2026-10-19'
+
+  - provider_status: unpaid_account_closed
+    applies_to: response_file_code
+    root_status: failed
+    failure_action: block_payment_method
+    terminal: true
+    source:
+      kind: document
+      title: Example Batch Provider file layout
+      locator: Section 6, Response codes
+      quote: '10 - the account is closed and no further debit will succeed.'
+      retrieved: '2026-10-19'
+
+config_fields:
+  - name: providerSftpPrivateKey
+    storage: extra
+    description: PEM private key used for SFTP key-pair authentication.
+    secret: true
+    required: true
+
+  - name: providerSftpHost
+    storage: extra
+    description: Hostname of the provider's SFTP endpoint.
+    example: sftp.example-batch.test
+    secret: false
+    required: true
+
+lifecycle_hooks:
+  afterPolicyIssued:
+    behaviour: >-
+      Return schedule_payment actions for the policy's forecast premiums. The
+      platform batches each one on its due date; nothing is called here.
+    actions: [schedule_payment]
+    idempotency: >-
+      Returning the same actions for the same billing periods is intended; the
+      platform owns the schedule and reconciles rather than appending.
+
+  afterPolicyCancelled:
+    behaviour: Return unschedule_payment for every future collection on the policy.
+    actions: [unschedule_payment]
+    idempotency: Unscheduling an already-unscheduled payment is a no-op on the platform side.
+
+billing_settings:
+  batching:
+    enabled: false
+    schedule_time_utc: '05:00'
+    submission_lead_time: 2
+    latest_submission_time_utc: '13:30'
+  retry:
+    max_attempts: 2
+    backoff_days: 3
+    backoff_multiplier: 1
+
+error_scenarios:
+  - scenario: The SFTP host refused the connection at submission time.
+    module_error: NetworkError
+    handling: >-
+      Retry before the cutoff. If the cutoff passes, leave the payments
+      scheduled rather than marking them failed, and alert.
+    retryable: true
+
+  - scenario: The response file contains a code that is not in the status map.
+    module_error: ValidationError
+    handling: >-
+      Leave the payment as it is, log the unmapped code with the reference, and
+      alert so the code table can be extended deliberately.
+    retryable: false
+
+deviations:
+  - id: DEV-001
+    rule: webhooks
+    summary: The provider sends no webhooks; outcomes arrive in a daily response file.
+    rationale: >-
+      There is no callback channel at all, so the signature, payload and event
+      blocks have nothing to describe. State is reconciled by a scheduled read.
+    code_marker: 'DEVIATION: Provider has no webhooks. Scheduled response-file reader reconciles payment state.'
+    files: [code/services/response-file.service.ts]
+    provider_doc: 'docs/providers/example-batch.md#deviations-from-template'
+    pr_note: >-
+      This provider has no webhooks; state is reconciled from the daily
+      response file instead.
+
+  - id: DEV-002
+    rule: provider_interface
+    summary: PaymentProviderService has no slot for submitting a batch or reading a response file.
+    rationale: >-
+      Every method on the interface is a single-entity synchronous call. A
+      batch provider has no customer object and no per-payment charge call.
+    code_marker: 'DEVIATION: No PaymentProviderService method fits a batch file submission; batch assembly lives outside the provider service.'
+    files: [code/services/batch.service.ts]
+    provider_doc: 'docs/providers/example-batch.md#deviations-from-template'
+    pr_note: >-
+      Batch assembly does not implement PaymentProviderService because no
+      method on it fits.

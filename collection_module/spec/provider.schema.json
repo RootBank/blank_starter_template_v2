@@ -185,7 +185,7 @@
     },
 
     "integration": {
-      "description": "The shape discriminators. These exist so a spec cannot silently assume Stripe's shape (synchronous per-payment charge, webhook status).",
+      "description": "The shape discriminators. They exist so a spec has to state its shape rather than inherit the common one (synchronous per-payment charge, status by webhook) by default.",
       "type": "object",
       "additionalProperties": false,
       "required": ["collection_model", "status_source"],
@@ -249,7 +249,8 @@
       "required": ["type", "source"],
       "properties": {
         "type": {
-          "enum": ["api_key", "bearer", "basic", "hmac", "oauth2", "mtls", "sftp_key", "none"]
+          "enum": ["api_key", "bearer", "basic", "hmac", "oauth2", "mtls", "sftp_key", "none", "other"],
+          "description": "Use \"other\" for a scheme not listed, and describe it in notes. The list is what has been seen, not what is possible."
         },
         "header": { "type": "string", "minLength": 1 },
         "format": {
@@ -279,6 +280,10 @@
         {
           "if": { "properties": { "type": { "enum": ["mtls", "sftp_key"] } }, "required": ["type"] },
           "then": { "required": ["config_key", "notes"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "other" } }, "required": ["type"] },
+          "then": { "required": ["notes"] }
         }
       ]
     },
@@ -373,11 +378,12 @@
       "properties": {
         "header": { "type": "string", "minLength": 1 },
         "algorithm": {
-          "enum": ["hmac_sha256", "hmac_sha1", "hmac_sha512", "rsa_sha256", "basic_auth", "none"]
+          "enum": ["hmac_sha256", "hmac_sha1", "hmac_sha512", "rsa_sha256", "ed25519", "jws", "basic_auth", "none", "other"],
+          "description": "Use \"other\" for an algorithm not listed, and describe it in signed_payload_notes."
         },
         "scheme": {
-          "enum": ["sdk_verified", "raw_body_hmac", "field_concat_hmac", "header_token"],
-          "description": "What is actually signed. sdk_verified = the provider SDK verifies for us."
+          "enum": ["sdk_verified", "raw_body_hmac", "field_concat_hmac", "header_token", "other"],
+          "description": "What is actually signed. sdk_verified = the provider SDK verifies for us. Use \"other\" and describe it in signed_payload_notes if none of these fit."
         },
         "signed_payload_notes": { "type": "string" },
         "secret_config_key": { "type": "string", "minLength": 1 },
@@ -385,8 +391,16 @@
         "timestamp_tolerance_seconds": { "type": "integer", "minimum": 0 },
         "source": { "$ref": "#/$defs/source" }
       },
-      "if": { "properties": { "scheme": { "const": "field_concat_hmac" } }, "required": ["scheme"] },
-      "then": { "required": ["signed_payload_notes"] }
+      "allOf": [
+        {
+          "if": { "properties": { "scheme": { "enum": ["field_concat_hmac", "other"] } }, "required": ["scheme"] },
+          "then": { "required": ["signed_payload_notes"] }
+        },
+        {
+          "if": { "properties": { "algorithm": { "const": "other" } }, "required": ["algorithm"] },
+          "then": { "required": ["signed_payload_notes"] }
+        }
+      ]
     },
 
     "webhook_payload": {
@@ -395,7 +409,10 @@
       "additionalProperties": false,
       "required": ["shape", "content_type", "event_type_path", "reference_path"],
       "properties": {
-        "shape": { "enum": ["flat", "batched", "wrapped", "form_encoded"] },
+        "shape": {
+          "enum": ["flat", "batched", "wrapped", "form_encoded", "other"],
+          "description": "The shapes in docs/08-WEBHOOKS.md are four observed providers, not an exhaustive list. Use \"other\" and describe the structure in delivery_notes if none fit."
+        },
         "content_type": { "type": "string", "minLength": 3 },
         "events_path": {
           "type": "string",
@@ -408,8 +425,16 @@
         "delivery_notes": { "type": "string" },
         "source": { "$ref": "#/$defs/source" }
       },
-      "if": { "properties": { "shape": { "enum": ["batched", "wrapped"] } }, "required": ["shape"] },
-      "then": { "required": ["events_path"] }
+      "allOf": [
+        {
+          "if": { "properties": { "shape": { "enum": ["batched", "wrapped"] } }, "required": ["shape"] },
+          "then": { "required": ["events_path"] }
+        },
+        {
+          "if": { "properties": { "shape": { "const": "other" } }, "required": ["shape"] },
+          "then": { "required": ["delivery_notes"] }
+        }
+      ]
     },
 
     "webhook_event": {
@@ -493,7 +518,10 @@
       "additionalProperties": false,
       "required": ["transport", "path_pattern", "format"],
       "properties": {
-        "transport": { "enum": ["sftp", "ftps", "https", "s3"] },
+        "transport": {
+          "enum": ["sftp", "ftps", "https", "s3", "other"],
+          "description": "Use \"other\" for a transport not listed, and describe it in notes."
+        },
         "host_config_key": { "type": "string", "minLength": 1 },
         "path_pattern": { "type": "string", "minLength": 1 },
         "format": { "enum": ["fixed_width", "csv", "xml", "json", "pain_001", "other"] },
@@ -502,7 +530,9 @@
         "max_records_per_file": { "type": "integer", "minimum": 1 },
         "notes": { "type": "string" },
         "source": { "$ref": "#/$defs/source" }
-      }
+      },
+      "if": { "properties": { "transport": { "const": "other" } }, "required": ["transport"] },
+      "then": { "required": ["notes"] }
     },
 
     "status_reports": {
