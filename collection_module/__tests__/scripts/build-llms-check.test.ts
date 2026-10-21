@@ -1,84 +1,116 @@
-import { spawnSync } from 'child_process';
+import { spawnSync, SpawnSyncReturns } from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..');
 const BUILDER = path.join(REPO_ROOT, 'scripts', 'build-llms-full.js');
-const LLMS_FULL = path.join(REPO_ROOT, 'llms-full.txt');
-const DOC = path.join(REPO_ROOT, 'collection_module', 'docs', '09-TESTING.md');
 
-function runCheck() {
-  return spawnSync('node', [BUILDER, '--check'], { encoding: 'utf8' });
+// Every test runs against a throwaway copy of the repo, pointed at by LLMS_REPO_ROOT.
+// Nothing tracked is ever appended to or deleted, and the suite does not depend on
+// whether the real llms-full.txt happens to be in sync — that is CI's job, via
+// `npm run build:llms:check` against the real tree.
+let fixture: string;
+
+function run(args: string[] = []): SpawnSyncReturns<string> {
+  return spawnSync('node', [BUILDER, ...args], {
+    encoding: 'utf8',
+    env: { ...process.env, LLMS_REPO_ROOT: fixture },
+  });
 }
 
-/**
- * Append a line to a doc, run the check, and put the doc back exactly as it was.
- * Restoring in `finally` matters: a thrown expectation must not leave a modified
- * doc behind for the rest of the suite or for the working tree.
- */
-function withDriftedDoc<T>(docPath: string, fn: () => T): T {
-  const original = fs.readFileSync(docPath);
-  try {
-    fs.appendFileSync(docPath, '\nA line that only exists to drift the generated file.\n');
-    return fn();
-  } finally {
-    fs.writeFileSync(docPath, original);
+/** Assert on exit status, surfacing the script's own output when it doesn't match. */
+function expectExit(result: SpawnSyncReturns<string>, expected: number): void {
+  if (result.status !== expected) {
+    throw new Error(
+      `expected exit ${expected}, got ${result.status}\n\n` +
+        `--- stdout ---\n${result.stdout}\n--- stderr ---\n${result.stderr}`,
+    );
   }
 }
 
-describe('build-llms-full --check', () => {
-  it('exits 0 when the committed llms-full.txt matches the docs', () => {
-    const result = runCheck();
+function fixtureDoc(name: string): string {
+  return path.join(fixture, 'collection_module', 'docs', name);
+}
 
-    expect(result.status).toBe(0);
+const OUT = () => path.join(fixture, 'llms-full.txt');
+
+beforeEach(() => {
+  fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'llms-check-'));
+  fs.mkdirSync(path.join(fixture, 'collection_module'), { recursive: true });
+  for (const file of ['CLAUDE.md', 'AGENTS.md']) {
+    fs.copyFileSync(path.join(REPO_ROOT, file), path.join(fixture, file));
+  }
+  fs.cpSync(
+    path.join(REPO_ROOT, 'collection_module', 'docs'),
+    path.join(fixture, 'collection_module', 'docs'),
+    { recursive: true },
+  );
+  // Generate the fixture's own llms-full.txt so it starts self-consistent.
+  expectExit(run(), 0);
+});
+
+afterEach(() => {
+  fs.rmSync(fixture, { recursive: true, force: true });
+});
+
+function drift(name: string): void {
+  fs.appendFileSync(fixtureDoc(name), '\nA line that only exists to drift the generated file.\n');
+}
+
+describe('build-llms-full --check', () => {
+  it('exits 0 when llms-full.txt matches the docs', () => {
+    const result = run(['--check']);
+
+    expectExit(result, 0);
     expect(result.stdout).toContain('llms-full.txt is up to date');
   });
 
   it('exits 1 and names the drifted doc when a doc changes', () => {
-    withDriftedDoc(DOC, () => {
-      const result = runCheck();
+    drift('09-TESTING.md');
+    const result = run(['--check']);
 
-      expect(result.status).toBe(1);
-      expect(result.stderr).toContain('llms-full.txt is out of date');
-      // The section anchor and its source path are what make the CI log actionable.
-      expect(result.stderr).toContain('[changed] ## 09-TESTING');
-      expect(result.stderr).toContain('collection_module/docs/09-TESTING.md');
-      expect(result.stderr).toContain('Run `npm run build:llms`');
-    });
+    expectExit(result, 1);
+    expect(result.stderr).toContain('llms-full.txt is out of date');
+    // The section anchor and its source path are what make the CI log actionable.
+    expect(result.stderr).toContain('[changed] ## 09-TESTING');
+    expect(result.stderr).toContain('collection_module/docs/09-TESTING.md');
+    expect(result.stderr).toContain('Run `npm run build:llms`');
   });
 
   it('names only the drifted section, not every section', () => {
-    withDriftedDoc(DOC, () => {
-      const changed = runCheck().stderr.match(/\[changed\]/g) ?? [];
+    drift('09-TESTING.md');
+    const changed = run(['--check']).stderr.match(/\[changed\]/g) ?? [];
 
-      // Doc bodies contain their own `##` headings, so a parser that split on every
-      // `## ` would report all 24 sections here instead of the one that moved.
-      expect(changed).toHaveLength(1);
-    });
+    // Doc bodies contain their own `##` headings, so a parser that split on every
+    // `## ` would report all 24 sections here instead of the one that moved.
+    expect(changed).toHaveLength(1);
   });
 
   it('writes nothing in --check mode, on either the pass or the fail path', () => {
-    const before = fs.readFileSync(LLMS_FULL);
+    const before = fs.readFileSync(OUT());
 
-    runCheck();
-    expect(fs.readFileSync(LLMS_FULL).equals(before)).toBe(true);
+    run(['--check']);
+    expect(fs.readFileSync(OUT()).equals(before)).toBe(true);
 
-    withDriftedDoc(DOC, () => {
-      runCheck();
-      expect(fs.readFileSync(LLMS_FULL).equals(before)).toBe(true);
-    });
+    drift('09-TESTING.md');
+    run(['--check']);
+    expect(fs.readFileSync(OUT()).equals(before)).toBe(true);
   });
 
   it('exits 1 rather than crashing when llms-full.txt is absent', () => {
-    const saved = fs.readFileSync(LLMS_FULL);
-    try {
-      fs.unlinkSync(LLMS_FULL);
-      const result = runCheck();
+    fs.unlinkSync(OUT());
+    const result = run(['--check']);
 
-      expect(result.status).toBe(1);
-      expect(result.stderr).toContain('llms-full.txt is missing');
-    } finally {
-      fs.writeFileSync(LLMS_FULL, saved);
-    }
+    expectExit(result, 1);
+    expect(result.stderr).toContain('llms-full.txt is missing');
+  });
+
+  it('regenerates byte-for-byte, so a clean tree never drifts on rerun', () => {
+    const before = fs.readFileSync(OUT());
+
+    expectExit(run(), 0);
+
+    expect(fs.readFileSync(OUT()).equals(before)).toBe(true);
   });
 });

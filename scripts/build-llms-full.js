@@ -19,7 +19,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const REPO_ROOT = path.resolve(__dirname, '..');
+// LLMS_REPO_ROOT lets the tests point the whole script at a throwaway copy of the
+// repo, so they never append to, or delete, a tracked file in the real working tree.
+// Unset — which is every real invocation — it resolves to the repo root as before.
+const REPO_ROOT = process.env.LLMS_REPO_ROOT
+  ? path.resolve(process.env.LLMS_REPO_ROOT)
+  : path.resolve(__dirname, '..');
 const DOCS = path.join(REPO_ROOT, 'collection_module', 'docs');
 const OUT_PATH = path.join(REPO_ROOT, 'llms-full.txt');
 
