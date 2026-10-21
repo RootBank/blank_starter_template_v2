@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to the same branch supersedes any run still in flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # package.json lives in collection_module/, not the repo root.
+    # This applies to `run` steps only — `uses` steps still resolve paths from the
+    # repo root, which is why the setup-node paths below are fully qualified.
+    working-directory: collection_module
+
+jobs:
+  build:
+    name: lint / test / build / docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: collection_module/.nvmrc
+          cache: npm
+          cache-dependency-path: collection_module/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Provide env.ts
+        # code/env.ts is gitignored (it holds secrets in a real deployment), but both
+        # tsc and the jest setup file import it. The sample is the committed stand-in.
+        run: cp code/env.sample.ts code/env.ts
+
+      - name: Lint (non-blocking)
+        # TODO(human): make this a hard gate. `npm run lint` currently reports 31 errors
+        # in code/ on a clean checkout of main (28 of them auto-fixable via
+        # `npm run lint:fix`). Blocking on it today would fail every PR for reasons
+        # unrelated to the PR. Once code/ is clean, delete this line.
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Test
+        # test:ci rather than test: it adds --coverage, which is what makes the 70%
+        # global coverageThreshold in jest.config.js actually get evaluated. Plain
+        # `npm test` passes regardless of coverage. main currently sits at 86% stmts
+        # / 74% branches, so the threshold is met with room.
+        run: npm run test:ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check llms-full.txt is not stale
+        # llms-full.txt is generated and committed. This fails the build if it no
+        # longer matches the docs it is generated from.
+        run: npm run build:llms:check
+
+      # TODO(human): add `npm run validate:provider` here once the script is reworked.
+      # It currently exits 2 when no provider implementation is present, which is the
+      # normal state of this template repo, so it cannot be a gate yet. Depends on the
+      # slice reworking scripts/validate-provider.js (adding --json and the missing
+      # criteria from docs/14-SELF-REVIEW.md).

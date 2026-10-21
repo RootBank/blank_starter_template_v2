@@ -64,7 +64,8 @@
     "deploy:sandbox": "bash ../scripts/deploy.sh sandbox",
     "deploy:production": "bash ../scripts/deploy.sh production",
     "deploy:dry-run:sandbox": "bash ../scripts/deploy.sh --dry-run sandbox",
-    "deploy:dry-run:production": "bash ../scripts/deploy.sh --dry-run production"
+    "deploy:dry-run:production": "bash ../scripts/deploy.sh --dry-run production",
+    "build:llms:check": "node ../scripts/build-llms-full.js --check"
   },
   "engines": {
     "npm": ">=8.0.0",
