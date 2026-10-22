@@ -1,6 +1,6 @@
 # Collection Module Template
 
-A provider-agnostic template for connecting any payment provider to the [Root Platform](https://rootplatform.com). Designed for AI-assisted development — Claude, Cursor, or Copilot can take provider API docs and produce a production-ready module in a single session.
+A provider-agnostic template for connecting any payment provider to the [Root Platform](https://rootplatform.com). Designed for AI-assisted development — Claude, Cursor, or any [agents.md](https://agents.md)-aware tool can take provider API docs and produce a production-ready module in a single session.
 
 ---
 
@@ -51,9 +51,9 @@ The `.cursor/rules/build-from-spec.mdc` rule activates automatically:
 @build-from-spec Add a new provider. API docs: <provider-docs-url>
 ```
 
-### GitHub Copilot
+### Other agents
 
-The `.github/copilot-instructions.md` gives Copilot full project context. Use Copilot Chat to implement stubs and write tests.
+[`AGENTS.md`](AGENTS.md) is the vendor-neutral entry point — self-contained orientation, conventions, and the provider-integration prompt. For agents that can't navigate the filesystem, [`llms.txt`](llms.txt) is a doc index and [`llms-full.txt`](llms-full.txt) is every doc flattened into one file.
 
 ---
 

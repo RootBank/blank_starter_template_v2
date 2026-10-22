@@ -9,12 +9,21 @@
 ## 1. Provider Overview
 
 ```
-Provider name:         e.g. GoCardless
-Provider website:      e.g. https://gocardless.com
-API docs URL:          e.g. https://developer.gocardless.com/api-reference
-SDK (npm package):     e.g. gocardless-nodejs  (or "none — REST only")
-API version:           e.g. 2015-07-06
+Provider name:             e.g. GoCardless
+Provider website:          e.g. https://gocardless.com
+API docs URL:              e.g. https://developer.gocardless.com/api-reference
+API base URL (sandbox):    e.g. https://api-sandbox.gocardless.com
+API base URL (production): e.g. https://api.gocardless.com
+SDK (npm package):         e.g. gocardless-nodejs  (or "none — REST only")
+API version:               e.g. 2015-07-06
 ```
+
+A base URL is the host the module calls. It is not the host the docs are published on
+— those are usually different hosts — and most providers use a different one per
+environment. Fill both in for a REST-only provider: the scaffolder refuses to generate
+an HTTP client unless at least one is present, and it uses the **sandbox** URL, since a
+new integration is built and tested against sandbox first. Record the production URL
+here too, though nothing reads it yet: moving the base URL into config is a follow-up.
 
 ---
 
@@ -148,7 +157,7 @@ List known error cases to handle:
 Any other context the AI needs:
 - Special auth flows (OAuth token refresh, etc.)
 - Idempotency key requirements
-- Sandbox vs production base URL differences
+- Anything that differs between sandbox and production beyond the base URL (auth, event names, rate limits)
 - Rate limits or retry behaviour
 - Currency or amount formatting (cents vs units)
 
@@ -157,3 +166,4 @@ Any other context the AI needs:
 - You can list the nine sections every spec must contain.
 - You know which section drives the status-mapping table in the adapter.
 - You can identify which sections, if left blank, will block scaffolding.
+- You can explain why "API docs URL" and "API base URL" are separate fields.
