@@ -40,7 +40,9 @@
  *   --hook         Lifecycle hook to invoke (see --list).
  *   --fixture      Explicit fixture path. Overrides --event / --hook lookup.
  *   --tamper       Corrupt the signature digest before sending. The run then
- *                  expects a rejection; an acceptance is a failure.
+ *                  expects a 4xx rejection. Accepting it is a failure, and so is
+ *                  erroring, because a handler that crashes before its signature
+ *                  check has proved nothing about verification.
  *   --timestamp    Unix seconds used for `{timestamp}` in a payload template.
  *                  Defaults to now. Pass it to make a run reproducible.
  *   --env          sandbox | production. Default sandbox.
@@ -51,7 +53,7 @@
  *
  * Exit codes:
  *   0  the run matched its expectation
- *   1  the handler errored, rejected a good signature, or accepted a bad one
+ *   1  the handler errored, rejected a good signature, or failed to reject a bad one
  *   2  usage error — unknown fixture/hook, missing or unknown signature scheme
  *
  * See: collection_module/docs/08-WEBHOOKS.md   (payload shapes, verification)
@@ -180,7 +182,7 @@ function runWebhook(root, args) {
   let signed;
   try {
     signed = signFixture(fixture, secret, {
-      timestamp: args.timestamp ? Number(args.timestamp) : Math.floor(Date.now() / 1000),
+      timestamp: resolveTimestamp(args.timestamp),
       tamper: Boolean(args.tamper),
     });
   } catch (err) {
@@ -299,6 +301,19 @@ function judgeWebhook(fixture, signed, response, thrown, wiring, record) {
             'is still commented out. Wire it and run --tamper again.',
       };
     }
+    if (status < 400 || status >= 500) {
+      const logged = handlerError(record);
+      return {
+        expectation: describeExpectation(fixture, signed),
+        status: 'FAIL',
+        reason:
+          `The handler returned ${status} for a tampered signature. That is an error, ` +
+          'not a rejection: the handler failed before or instead of deciding whether the ' +
+          'signature was valid, so this run proves nothing about verification' +
+          `${logged ? `. It logged "${logged}"` : ''}. A rejection is a 4xx.`,
+      };
+    }
+
     return {
       expectation: describeExpectation(fixture, signed),
       status: 'PASS',
@@ -333,7 +348,7 @@ function judgeWebhook(fixture, signed, response, thrown, wiring, record) {
 }
 
 function describeExpectation(fixture, signed) {
-  if (signed.report.tampered) return 'reject (any non-2xx status)';
+  if (signed.report.tampered) return 'reject with a 4xx status';
   return `status ${(fixture.expect && fixture.expect.status) || 200}`;
 }
 
@@ -739,6 +754,23 @@ function signFixture(fixture, secret, options) {
   };
 }
 
+/**
+ * A payload template that interpolates {timestamp} signs whatever this returns,
+ * so a value that is not a whole number has to stop the run. Number('oops') is
+ * NaN, which would otherwise be signed as the literal text "NaN" and reported
+ * as a pass.
+ */
+function resolveTimestamp(raw) {
+  if (raw === undefined) return Math.floor(Date.now() / 1000);
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+    throw new Error(
+      `--timestamp must be whole seconds since the epoch. Got ${JSON.stringify(raw)}.\n` +
+        '  Omit it to use the current time, or pass a value like --timestamp=1760000000.',
+    );
+  }
+  return Number(raw);
+}
+
 function corrupt(digest) {
   // Flip the first character to a different one in the same alphabet so the
   // digest stays well-formed and the handler rejects it on comparison, not on
@@ -967,18 +999,22 @@ function ensureConfigResolves(container, { ServiceToken, ServiceLifetime }, root
 function handlerVerifiesSignatures(root) {
   const file = path.join(root, 'code', 'webhook-hooks.ts');
   if (!fs.existsSync(file)) return false;
-  return fs
-    .readFileSync(file, 'utf8')
-    .split('\n')
-    .some((line) => {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('//') || trimmed.startsWith('*')) return false;
-      return (
-        trimmed.includes('verifyWebhookSignature') ||
-        trimmed.includes('WEBHOOK_PARSER') ||
-        trimmed.includes('verifyAndParse')
-      );
-    });
+
+  // Strip block comments before scanning, so a handler whose verification step
+  // is commented out as /* ... */ is not read as a handler that verifies. This
+  // is a label on the report, not the test: a --tamper run is what actually
+  // decides whether the handler rejects a bad digest.
+  const source = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  return source.split('\n').some((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('//')) return false;
+    return (
+      trimmed.includes('verifyWebhookSignature') ||
+      trimmed.includes('WEBHOOK_PARSER') ||
+      trimmed.includes('verifyAndParse')
+    );
+  });
 }
 
 function resolveSecret(loaded, fixture) {
@@ -1464,7 +1500,8 @@ Options:
   --event       Match a fixture by its "event" or file name.
   --hook        Lifecycle hook to invoke. --list shows the catalogue.
   --fixture     Explicit fixture path; overrides --event / --hook lookup.
-  --tamper      Corrupt the signature digest. The run then expects a rejection.
+  --tamper      Corrupt the signature digest. The run then expects a 4xx rejection;
+                accepting it fails, and so does erroring instead of rejecting.
   --timestamp   Unix seconds for {timestamp} in a payload template (default: now).
   --env         sandbox | production (default: sandbox).
   --json        Emit one JSON object on stdout and nothing else.
@@ -1474,7 +1511,7 @@ Options:
 
 Exit codes:
   0  the run matched its expectation
-  1  the handler errored, rejected a good signature, or accepted a bad one
+  1  the handler errored, rejected a good signature, or failed to reject a bad one
   2  usage error — unknown fixture/hook, missing or unknown signature scheme
 
 The simulator signs for real: the digest comes from the scheme the fixture
