@@ -3445,9 +3445,9 @@ API version:               e.g. 2015-07-06
 A base URL is the host the module calls. It is not the host the docs are published on
 — those are usually different hosts — and most providers use a different one per
 environment. Fill both in for a REST-only provider: the scaffolder refuses to generate
-an HTTP client unless at least one is present, and it scaffolds with the **sandbox**
-URL, since a new integration is built and tested against sandbox first. The production
-URL belongs here too, so the deployment config has it.
+an HTTP client unless at least one is present, and it uses the **sandbox** URL, since a
+new integration is built and tested against sandbox first. Record the production URL
+here too, though nothing reads it yet: moving the base URL into config is a follow-up.
 
 ---
 

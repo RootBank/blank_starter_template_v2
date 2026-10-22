@@ -40,7 +40,7 @@ if (args.help) {
 // ─── --from-spec: read and merge values from a filled SPEC-TEMPLATE.md ───────
 
 if (args['from-spec']) {
-  const specArgs = readSpecFile(args['from-spec'], args);
+  const specArgs = readSpecFile(args['from-spec']);
   // Spec values are defaults; explicit CLI flags take precedence
   for (const [key, val] of Object.entries(specArgs)) {
     if (!args[key]) args[key] = val;
@@ -51,6 +51,7 @@ if (args['from-spec']) {
 // ─── Validation ──────────────────────────────────────────────────────────────
 
 const errors = [];
+const apiType = args['api-type'] || 'http';   // http is the default when the flag is omitted
 
 if (!args.provider) {
   errors.push('--provider is required (e.g. --provider=GoCardless)');
@@ -58,10 +59,14 @@ if (!args.provider) {
 if (args['api-type'] && !['sdk', 'http'].includes(args['api-type'])) {
   errors.push('--api-type must be "sdk" or "http"');
 }
-if (args['api-type'] === 'http' && !args['base-url']) {
-  errors.push('--base-url is required when --api-type=http');
+if (apiType === 'http' && !args['base-url']) {
+  errors.push(
+    args['from-spec']
+      ? `No API base URL in ${args['from-spec']}. Add "API base URL (sandbox):" to section 1, or pass --base-url. An "API docs URL:" is not a base URL.`
+      : '--base-url is required for an http provider (the default when --api-type is omitted), e.g. --base-url=https://api.gocardless.com',
+  );
 }
-if (args['api-type'] === 'sdk' && !args['sdk-package']) {
+if (apiType === 'sdk' && !args['sdk-package']) {
   errors.push('--sdk-package is required when --api-type=sdk (e.g. --sdk-package=gocardless-nodejs)');
 }
 
@@ -74,8 +79,7 @@ if (errors.length) {
 
 const Provider = toPascalCase(args.provider);          // e.g. GoCardless
 const provider = toSlug(args.provider);                // e.g. gocardless
-const apiType = args['api-type'] || 'http';
-const baseUrl = args['base-url'] || 'https://api.example.com';
+const baseUrl = args['base-url'];
 const sdkPackage = args['sdk-package'] || '';
 const authHeader = args['auth-header'] || 'Authorization';
 const webhookHeader = args['webhook-header'] || 'X-Webhook-Signature';
@@ -641,9 +645,8 @@ function toSlug(str) {
 /**
  * readSpecFile — parse a filled SPEC-TEMPLATE.md and extract scaffold args.
  * Reads the "Provider Overview" and other sections for known fields.
- * `cliArgs` are the already-parsed flags: they win over anything in the spec.
  */
-function readSpecFile(specPath, cliArgs) {
+function readSpecFile(specPath) {
   const absPath = path.resolve(specPath);
   if (!fs.existsSync(absPath)) {
     log('error', `Spec file not found: ${absPath}`);
@@ -693,16 +696,6 @@ function readSpecFile(specPath, cliArgs) {
   if (webhookMatch) {
     const header = webhookMatch[1].trim().replace(/^e\.g\.?\s*/i, '').split(/\s+/)[0];
     if (header && !header.toLowerCase().startsWith('e.g')) extracted['webhook-header'] = header;
-  }
-
-  // http is the default api-type, so a spec with no SDK line lands here too. Fail now,
-  // with the spec named, rather than scaffolding a client that points nowhere.
-  const apiType = cliArgs['api-type'] || extracted['api-type'] || 'http';
-  if (apiType === 'http' && !cliArgs['base-url'] && !extracted['base-url']) {
-    log('error', `No API base URL in ${specPath}`);
-    log('error', 'Add "API base URL (sandbox):" to section 1 of the spec, or pass --base-url explicitly.');
-    log('error', 'An "API docs URL:" is not a base URL — the docs host is rarely the API host.');
-    process.exit(1);
   }
 
   return extracted;
@@ -773,7 +766,7 @@ Examples:
     --webhook-header=X-MyProvider-Signature
 
   # Dry run (preview only)
-  npm run scaffold:provider -- --provider=PayFast --dry-run
+  npm run scaffold:provider -- --provider=PayFast --base-url=https://api.payfast.co.za --dry-run
 
 Files created:
   code/clients/{provider}-client.ts

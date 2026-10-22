@@ -142,10 +142,12 @@ All requests must be authenticated.
     expect(output).not.toContain('docs-example.testco.io');
   });
 
-  it('ignores a base URL line still holding the template placeholder', () => {
+  // Validation collects every missing argument and reports them together. A spec
+  // short of two things must say both, not send the user round again for the second.
+  it('reports every missing argument in one run', () => {
     const specFile = writeSpec(
-      'placeholder.md',
-      spec('API base URL (sandbox):    e.g. https://api-sandbox.gocardless.com'),
+      'two-gaps.md',
+      spec().replace(/Provider name:.*\n/, ''),
     );
 
     let output = '';
@@ -155,7 +157,62 @@ All requests must be authenticated.
       output = (err as { stdout: string }).stdout;
     }
 
+    expect(output).toContain('--provider is required');
+    expect(output).toContain('No API base URL');
+  });
+
+  it('ignores a base URL line still holding the template placeholder', () => {
+    const specFile = writeSpec(
+      'placeholder.md',
+      spec('API base URL (sandbox):    e.g. https://api-sandbox.gocardless.com'),
+    );
+
+    let output = '';
+    let status: number | null = null;
+    try {
+      scaffold(specFile);
+    } catch (err) {
+      const e = err as { status: number; stdout: string };
+      status = e.status;
+      output = e.stdout;
+    }
+
+    expect(status).toBe(1);
     expect(output).toContain('No API base URL');
     expect(output).not.toContain('gocardless.com');
+  });
+});
+
+describe('scaffold-provider flags: base URL', () => {
+  const run = (...flags: string[]) =>
+    execFileSync('node', [scaffolder, '--provider=Foo', '--reason=test', '--dry-run', ...flags], {
+      encoding: 'utf8',
+    });
+
+  // http is the default, so omitting --api-type must require a base URL exactly as
+  // passing --api-type=http does.
+  it('requires a base URL when --api-type is omitted', () => {
+    let output = '';
+    let status: number | null = null;
+    try {
+      run();
+    } catch (err) {
+      const e = err as { status: number; stdout: string };
+      status = e.status;
+      output = e.stdout;
+    }
+
+    expect(status).toBe(1);
+    expect(output).toContain('--base-url is required');
+    // No placeholder host may stand in for a real one.
+    expect(output).not.toContain('api.example.com');
+  });
+
+  it('still scaffolds when the base URL is given', () => {
+    expect(run('--base-url=https://api.foo.com')).toMatch(/"created":8/);
+  });
+
+  it('does not require a base URL for an sdk provider', () => {
+    expect(run('--api-type=sdk', '--sdk-package=foo-nodejs')).toMatch(/"created":8/);
   });
 });
