@@ -1,0 +1,24 @@
+{
+  "name": "afterPolicyPaymentMethodAssigned",
+  "hook": "afterPolicyPaymentMethodAssigned",
+  "description": "A payment method has been attached to a policy; the hook is expected to attach it to the provider customer.",
+  "notes": "payment_method.module is whatever createPaymentMethod returned — see docs/07-LIFECYCLE-HOOKS.md § createPaymentMethod.",
+  "args": {
+    "policy": {
+      "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+      "status": "active",
+      "app_data": {
+        "provider_customer_id": "cus_sim_0001"
+      },
+      "payment_method": {
+        "payment_method_id": "pmr_sim_0001",
+        "type": "card",
+        "module": {
+          "id": "pm_sim_0001",
+          "brand": "visa",
+          "last4": "4242"
+        }
+      }
+    }
+  }
+}

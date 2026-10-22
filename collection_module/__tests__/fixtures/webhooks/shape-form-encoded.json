@@ -1,0 +1,21 @@
+{
+  "name": "shape-form-encoded",
+  "event": "payment.form-encoded",
+  "shape": "form-encoded",
+  "description": "Format demonstration: the body is not JSON at all. It is a form-encoded parameter string, the digest is a plain hash rather than an HMAC, and the signature is appended to the body as another parameter. PayFast ITN has this form.",
+  "notes": "A format demonstration, not a verified PayFast fixture. TODO(human): PayFast urlencodes each value (spaces as +, uppercase hex) before hashing, and the passphrase is omitted entirely when the merchant has not set one — confirm both against their ITN docs. Note also that PayFast expects the receiver to post the payload back for validation; that server-to-server step is outside what this simulator exercises.",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/x-www-form-urlencoded"
+  },
+  "signature": {
+    "scheme": "md5-hex",
+    "placement": "body-query",
+    "field": "signature",
+    "payloadTemplate": "{body}&passphrase={secret}"
+  },
+  "bodyRaw": "m_payment_id=3c7a9e55-0000-4000-8000-000000000006&pf_payment_id=1089250&payment_status=COMPLETE&item_name=Policy+premium&amount_gross=249.00&amount_fee=-5.74&amount_net=243.26&custom_str1=8f1b4d2e-0000-4000-8000-000000000001",
+  "expect": {
+    "status": 200
+  }
+}

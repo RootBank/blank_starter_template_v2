@@ -1,0 +1,26 @@
+{
+  "name": "afterPaymentCreated",
+  "hook": "afterPaymentCreated",
+  "description": "Root has created a payment record against a policy that already has a provider customer. The hook is expected to create the provider-side payment intent.",
+  "notes": "payment.metadata is where docs/07-LIFECYCLE-HOOKS.md says to put payment_id so the later webhook can be correlated back.",
+  "args": {
+    "policy": {
+      "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+      "status": "active",
+      "policyholder": {
+        "email": "simulated.policyholder@example.com",
+        "first_name": "Sim"
+      },
+      "app_data": {
+        "provider_customer_id": "cus_sim_0001"
+      }
+    },
+    "payment": {
+      "payment_id": "3c7a9e55-0000-4000-8000-000000000002",
+      "status": "pending",
+      "amount": 24900,
+      "currency": "ZAR",
+      "collection_type": "debit_order"
+    }
+  }
+}

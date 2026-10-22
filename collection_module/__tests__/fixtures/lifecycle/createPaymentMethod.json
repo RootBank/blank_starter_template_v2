@@ -1,0 +1,16 @@
+{
+  "name": "createPaymentMethod",
+  "hook": "createPaymentMethod",
+  "description": "The raw capture payload Root hands the module when a payment method is submitted. The hook returns the `module` object stored on the Root payment method.",
+  "notes": "No provider call happens here — docs/07-LIFECYCLE-HOOKS.md notes the data is already captured by the time this fires. The simulator's intercepted-calls list should stay empty.",
+  "args": {
+    "data": {
+      "id": "pm_sim_0001",
+      "type": "card",
+      "brand": "visa",
+      "last4": "4242",
+      "exp_month": 12,
+      "exp_year": 2030
+    }
+  }
+}
