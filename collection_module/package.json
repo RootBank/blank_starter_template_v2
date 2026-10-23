@@ -48,7 +48,6 @@
     "clean": "rm -rf ./dist ./coverage",
     "test": "jest --forceExit",
     "test:unit": "jest --forceExit --testPathPattern='__tests__/(services|core|utils)'",
-    "test:integration": "jest --forceExit --testPathPattern='__tests__/integration'",
     "test:watch": "jest --watch",
     "test:coverage": "jest --forceExit --coverage",
     "test:ci": "jest --ci --forceExit --coverage --maxWorkers=2",
@@ -64,7 +63,8 @@
     "deploy:sandbox": "bash ../scripts/deploy.sh sandbox",
     "deploy:production": "bash ../scripts/deploy.sh production",
     "deploy:dry-run:sandbox": "bash ../scripts/deploy.sh --dry-run sandbox",
-    "deploy:dry-run:production": "bash ../scripts/deploy.sh --dry-run production"
+    "deploy:dry-run:production": "bash ../scripts/deploy.sh --dry-run production",
+    "build:llms:check": "node ../scripts/build-llms-full.js --check"
   },
   "engines": {
     "npm": ">=8.0.0",

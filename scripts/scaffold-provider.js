@@ -51,6 +51,7 @@ if (args['from-spec']) {
 // ─── Validation ──────────────────────────────────────────────────────────────
 
 const errors = [];
+const apiType = args['api-type'] || 'http';   // http is the default when the flag is omitted
 
 if (!args.provider) {
   errors.push('--provider is required (e.g. --provider=GoCardless)');
@@ -58,10 +59,14 @@ if (!args.provider) {
 if (args['api-type'] && !['sdk', 'http'].includes(args['api-type'])) {
   errors.push('--api-type must be "sdk" or "http"');
 }
-if (args['api-type'] === 'http' && !args['base-url']) {
-  errors.push('--base-url is required when --api-type=http');
+if (apiType === 'http' && !args['base-url']) {
+  errors.push(
+    args['from-spec']
+      ? `No API base URL in ${args['from-spec']}. Add "API base URL (sandbox):" to section 1, or pass --base-url. An "API docs URL:" is not a base URL.`
+      : '--base-url is required for an http provider (the default when --api-type is omitted), e.g. --base-url=https://api.gocardless.com',
+  );
 }
-if (args['api-type'] === 'sdk' && !args['sdk-package']) {
+if (apiType === 'sdk' && !args['sdk-package']) {
   errors.push('--sdk-package is required when --api-type=sdk (e.g. --sdk-package=gocardless-nodejs)');
 }
 
@@ -74,8 +79,7 @@ if (errors.length) {
 
 const Provider = toPascalCase(args.provider);          // e.g. GoCardless
 const provider = toSlug(args.provider);                // e.g. gocardless
-const apiType = args['api-type'] || 'http';
-const baseUrl = args['base-url'] || 'https://api.example.com';
+const baseUrl = args['base-url'];
 const sdkPackage = args['sdk-package'] || '';
 const authHeader = args['auth-header'] || 'Authorization';
 const webhookHeader = args['webhook-header'] || 'X-Webhook-Signature';
@@ -671,20 +675,14 @@ function readSpecFile(specPath) {
     }
   }
 
-  // API docs URL → use as base URL if no explicit base-url
-  const urlMatch = content.match(/API docs URL:\s*(.+)/i);
-  if (urlMatch) {
-    const url = urlMatch[1].trim().replace(/^e\.g\.?\s*/i, '');
-    if (url.startsWith('http') && !extracted['base-url']) {
-      // Strip path to get base URL
-      try {
-        const parsed = new URL(url);
-        extracted['base-url'] = `${parsed.protocol}//${parsed.host}`;
-      } catch {
-        // ignore malformed URL
-      }
-    }
-  }
+  // Base URL — sandbox first, since a new integration is built against sandbox.
+  // "API docs URL:" is a different field and is never a substitute for this one.
+  // Both labels match exactly: a looser pattern reaches into the raw provider docs
+  // that extract-spec.js embeds below the template in passthrough mode.
+  const baseUrl =
+    specUrl(content, /API base URL \(sandbox\):\s*(.+)/i) ||
+    specUrl(content, /API base URL \(production\):\s*(.+)/i);
+  if (baseUrl) extracted['base-url'] = baseUrl;
 
   // Auth header
   const authMatch = content.match(/Header name:\s*(.+)/i);
@@ -701,6 +699,25 @@ function readSpecFile(specPath) {
   }
 
   return extracted;
+}
+
+/**
+ * specUrl — pull an http(s) URL out of a `Label: value` spec line.
+ * The value is used verbatim (minus a trailing slash): a base URL may legitimately
+ * carry a version path. A line still holding the template's `e.g. ...` placeholder
+ * does not start with `http` and is treated as absent.
+ */
+function specUrl(content, pattern) {
+  const match = content.match(pattern);
+  if (!match) return null;
+  const value = match[1].trim().split(/\s+/)[0];
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    new URL(value);
+  } catch {
+    return null;
+  }
+  return value.replace(/\/+$/, '');
 }
 
 function printHelp() {
@@ -749,7 +766,7 @@ Examples:
     --webhook-header=X-MyProvider-Signature
 
   # Dry run (preview only)
-  npm run scaffold:provider -- --provider=PayFast --dry-run
+  npm run scaffold:provider -- --provider=PayFast --base-url=https://api.payfast.co.za --dry-run
 
 Files created:
   code/clients/{provider}-client.ts
