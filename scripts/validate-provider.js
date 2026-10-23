@@ -26,6 +26,10 @@
  *   --root       collection_module root (default: ../collection_module).
  *   --json       Emit the full result set as JSON on stdout and suppress the
  *                human-readable report entirely. Exit codes are unchanged.
+ *   --allow-missing-provider
+ *                Exit 0 instead of 2 when no provider is present. For CI on the
+ *                bare template, where "no provider yet" is the normal state but
+ *                a provider that IS present must still pass.
  *   --help       Show this help.
  *
  * JSON shape (schemaVersion 1):
@@ -35,7 +39,8 @@
  *   On exit 2 the object is { schemaVersion, error, message, exitCode } instead.
  *
  * Exit codes:
- *   0  all Critical and (mechanizable) Major checks pass
+ *   0  all Critical and (mechanizable) Major checks pass, or no provider is
+ *      present and --allow-missing-provider was passed
  *   1  one or more checks failed
  *   2  usage / no provider found
  */
@@ -61,27 +66,22 @@ const TESTS = path.join(ROOT, '__tests__');
 const provider = args.provider || autoDetectProvider(CODE);
 
 if (!provider) {
+  // The bare template has no provider, which is its normal state. CI still runs
+  // the script so that the moment a provider IS added, every criterion gates it.
+  const tolerated = args['allow-missing-provider'] === true;
+  const code = tolerated ? 0 : 2;
+  const message =
+    'No provider implementation found in code/clients/. Run `npm run scaffold:provider` first, or pass --provider=<slug>.';
   if (JSON_MODE) {
     process.stdout.write(
-      `${JSON.stringify(
-        {
-          schemaVersion: 1,
-          error: 'no-provider',
-          message:
-            'No provider implementation found in code/clients/. Run `npm run scaffold:provider` first, or pass --provider=<slug>.',
-          exitCode: 2,
-        },
-        null,
-        2,
-      )}\n`,
+      `${JSON.stringify({ schemaVersion: 1, error: 'no-provider', message, exitCode: code }, null, 2)}\n`,
     );
+  } else if (tolerated) {
+    console.log(`○ No provider implementation yet — nothing to validate.\n  ${message}`);
   } else {
-    console.error(
-      '✗ No provider implementation found in code/clients/.\n' +
-        '  Run `npm run scaffold:provider` first, or pass --provider=<slug>.',
-    );
+    console.error(`✗ ${message.replace('. ', '.\n  ')}`);
   }
-  process.exit(2);
+  process.exit(code);
 }
 
 const Provider = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -173,7 +173,19 @@ check(
 );
 check(
   { id: 'C3', severity: 'critical', label: 'Webhook signature verified before parsing', file: webhookPath },
-  () => fileIncludes(webhookPath, 'verifyWebhookSignature'),
+  () => {
+    // Comment-stripped, like M7 and m3. The template ships this file with the
+    // signature check present only inside a commented-out example, and a raw
+    // text search would pass it — on the one criterion that stops an unsigned
+    // webhook being trusted.
+    const text = stripComments(readOrThrow(webhookPath));
+    const at = text.indexOf('verifyWebhookSignature');
+    return {
+      passed: at !== -1,
+      detail: at === -1 ? 'no live call to verifyWebhookSignature' : '',
+      line: at === -1 ? null : lineAt(text, at),
+    };
+  },
 );
 check({ id: 'C4', severity: 'critical', label: 'No unimplemented TODO stubs in service', file: servicePath }, () => {
   const text = readOrThrow(servicePath);
@@ -564,7 +576,7 @@ function extractCallable(text, name) {
     const parenOpen = text.indexOf('(', m.index + m[0].length - 1);
     const parenClose = matchParen(text, parenOpen);
     if (parenClose !== -1) {
-      const braceOpen = text.indexOf('{', parenClose);
+      const braceOpen = findBodyBrace(text, parenClose);
       // Reject a call site: only a return type or `=>` may sit between `)` and `{`.
       const between = braceOpen === -1 ? '' : text.slice(parenClose + 1, braceOpen);
       if (braceOpen !== -1 && !/[;)]/.test(between)) {
@@ -608,7 +620,7 @@ function publicMethods(raw, file) {
     const skip = name === 'constructor' || /\b(private|protected)\b/.test(modifiers);
     if (!skip) {
       const parenClose = matchParen(text, text.indexOf('(', m.index + m[0].length - 1));
-      const braceOpen = parenClose === -1 ? -1 : text.indexOf('{', parenClose);
+      const braceOpen = findBodyBrace(text, parenClose);
       const braceClose = braceOpen === -1 ? -1 : matchBrace(text, braceOpen);
       if (braceClose !== -1) {
         methods.push({
@@ -639,16 +651,59 @@ function hookIsWired(file, hookName) {
   const text = stripComments(readOrThrow(file));
   const fn = extractCallable(text, hookName);
   if (!fn) return { passed: false, detail: `${hookName} not found`, file };
-  const resolves = /ServiceToken\.PROVIDER_SERVICE/.test(fn.body);
-  const awaits = /\bawait\s+[A-Za-z_$][\w$]*\s*(?:\?\.)?\.?[\w$]*\s*\(/.test(fn.body);
-  const calls = SERVICE_METHODS.filter((name) => new RegExp(`\\.${name}\\s*\\(`).test(fn.body));
-  if (!resolves) {
+  // Bind to the variable the resolve is assigned to. Checking "PROVIDER_SERVICE
+  // appears" and "some await exists" as two independent facts passes a hook that
+  // resolves the service, never touches it, and awaits something else entirely.
+  const binding = fn.body.match(
+    /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]*)?=\s*[^;]*ServiceToken\.PROVIDER_SERVICE/,
+  );
+  if (!binding) {
     return { passed: false, detail: 'does not resolve ServiceToken.PROVIDER_SERVICE', file, line: fn.line };
   }
-  if (!awaits) {
-    return { passed: false, detail: 'resolves PROVIDER_SERVICE but never awaits a call on it', file, line: fn.line };
+  const name = binding[1];
+  const called = [...fn.body.matchAll(new RegExp(`\\b(?:await|return)\\s+${name}\\s*\\.\\s*([\\w$]+)\\s*\\(`, 'g'))].map(
+    (m) => m[1],
+  );
+  if (called.length === 0) {
+    return {
+      passed: false,
+      detail: `resolves PROVIDER_SERVICE as \`${name}\` but never awaits a call on it`,
+      file,
+      line: fn.line,
+    };
   }
-  return { passed: true, detail: calls.length ? `calls ${calls.join(', ')}` : 'no known PaymentProviderService method called', file, line: fn.line };
+  const known = called.filter((m) => SERVICE_METHODS.includes(m));
+  return {
+    passed: true,
+    detail: `calls ${[...new Set(called)].join(', ')}${known.length ? '' : ' (not a PaymentProviderService method)'}`,
+    file,
+    line: fn.line,
+  };
+}
+
+/**
+ * Index of the `{` that opens a function body, scanning from the signature's
+ * closing paren. A `{` nested inside a generic type argument is not the body:
+ * `async getCustomer(id: string): Promise<{ id: string }>` would otherwise have
+ * its return type read as its body. Returns -1 when there is no body at all,
+ * which is what an overload or interface signature looks like.
+ */
+function findBodyBrace(text, parenClose) {
+  if (parenClose === -1) return -1;
+  let angle = 0;
+  for (let i = parenClose + 1; i < text.length; i += 1) {
+    const c = text[i];
+    if (c === '<') angle += 1;
+    else if (c === '>') angle = Math.max(0, angle - 1);
+    else if (c === ';') return -1;
+    else if (c === '{') {
+      if (angle === 0) return i;
+      const close = matchBrace(text, i);
+      if (close === -1) return -1;
+      i = close;
+    }
+  }
+  return -1;
 }
 
 // The first live `switch` in webhook-hooks.ts, with its case labels and default
@@ -725,6 +780,9 @@ Options:
   --provider   Provider slug (auto-detected from code/clients/ if omitted)
   --root       collection_module root (default: ../collection_module)
   --json       Emit JSON on stdout and suppress the human-readable report
+  --allow-missing-provider
+               Exit 0 rather than 2 when no provider is present (for CI on the
+               bare template). A provider that IS present still has to pass.
   --help       Show this help
 
 Mechanizes C1-C6, C8, M1-M8 and m1-m5 from docs/14-SELF-REVIEW.md. M4-M7 and m1

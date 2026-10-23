@@ -83,6 +83,12 @@ export class TestcoService {
     return retryWithBackoff(() => this.providerClient.sdk.post('/payments', params));
   }
 
+  // Inline object return type: the \`{\` here is not the body brace.
+  async getCustomer(id: string): Promise<{ id: string; email: string }> {
+    this.logService.info('Getting customer', 'TestcoService', { id });
+    return retryWithBackoff(() => this.providerClient.sdk.get('/customers'));
+  }
+
   // A private helper deliberately does not log — M2 is about the public surface.
   private buildHeaders(): Record<string, string> {
     return { 'X-Testco-Version': '2024-01-01' };
@@ -213,6 +219,9 @@ export async function afterPolicyPaymentMethodAssigned({ policy }: { policy: any
   });
   describe('createPaymentIntent', () => {
     it('creates a payment intent', () => expect(true).toBe(true));
+  });
+  describe('getCustomer', () => {
+    it('gets a customer', () => expect(true).toBe(true));
   });
 });
 `,
@@ -475,6 +484,9 @@ export async function afterPolicyIssued({ policy }: { policy: any }): Promise<vo
   describe('createCustomer', () => {
     it('creates a customer', () => expect(true).toBe(true));
   });
+  describe('getCustomer', () => {
+    it('gets a customer', () => expect(true).toBe(true));
+  });
 });
 `,
       },
@@ -541,6 +553,64 @@ export async function afterPolicyIssued({ policy }: { policy: any }): Promise<vo
     expect(byId(json, 'C8').detail).toMatch(/missing code\/env\.sample\.ts/);
   });
 
+  it('fails C3 when the signature check exists only in a comment', () => {
+    // The shipped template is exactly this shape. A raw text search passes it,
+    // which would wave through an unsigned webhook on a Critical criterion.
+    const commentedOut = PASSING['code/webhook-hooks.ts'].replace(
+      /^(\s*)(const isValid = providerClient\.verifyWebhookSignature\()/m,
+      '$1// $2',
+    );
+    const { json } = report(writeTree({ 'code/webhook-hooks.ts': commentedOut }));
+    expect(byId(json, 'C3').passed).toBe(false);
+    expect(byId(json, 'C3').detail).toMatch(/no live call/);
+  });
+
+  it('passes M2 for a method whose return type contains an object literal', () => {
+    // `Promise<{ id: string }>` must not be mistaken for the method body.
+    const { json } = report(writeTree());
+    expect(byId(json, 'M2').passed).toBe(true);
+    expect(byId(json, 'M2').detail).toMatch(/3 method\(s\) log first/);
+  });
+
+  it('fails M4 when the hook resolves the provider service but awaits something else', () => {
+    const { json } = report(
+      writeTree({
+        'code/lifecycle-hooks/policy.hooks.ts': `import { getContainer } from '../core/container.setup';
+import { ServiceToken } from '../core/container';
+
+export async function afterPolicyIssued({ policy }: { policy: any }): Promise<void> {
+  const container = getContainer();
+  const providerService = container.resolve(ServiceToken.PROVIDER_SERVICE);
+  await somethingUnrelated(policy);
+}
+`,
+      }),
+    );
+    expect(byId(json, 'M4').passed).toBe(false);
+    expect(byId(json, 'M4').detail).toMatch(/never awaits a call on it/);
+  });
+
+  it('reports which provider method a wired hook actually calls', () => {
+    const { json } = report(writeTree());
+    expect(byId(json, 'M4').detail).toBe('calls createCustomer');
+    expect(byId(json, 'M6').detail).toBe('calls attachPaymentMethod');
+  });
+
+  it('flags a hook that awaits a method not on PaymentProviderService', () => {
+    // Still a pass: the hook is wired. The detail says the method is unknown so
+    // the reviewer closing M4's semanticGap knows to look.
+    const { json } = report(
+      writeTree({
+        'code/lifecycle-hooks/payment.hooks.ts': PASSING['code/lifecycle-hooks/payment.hooks.ts'].replace(
+          'createPaymentIntent',
+          'chargeTheThing',
+        ),
+      }),
+    );
+    expect(byId(json, 'M5').passed).toBe(true);
+    expect(byId(json, 'M5').detail).toMatch(/not a PaymentProviderService method/);
+  });
+
   it('exempts LogService from M8 — it is the sanctioned console sink', () => {
     const { json } = report(
       writeTree({
@@ -564,6 +634,51 @@ export async function afterPolicyIssued({ policy }: { policy: any }): Promise<vo
       .join('\n');
     const { json } = report(writeTree({ 'code/lifecycle-hooks/payment.hooks.ts': commentedOut }));
     expect(byId(json, 'M5').passed).toBe(false);
+  });
+
+  it('exits 0 on a tree with no provider when --allow-missing-provider is passed', () => {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'cm-validate-noprov-'));
+    tmpDirs.push(empty);
+    const res = execFileSync('node', [script, `--root=${empty}`, '--allow-missing-provider', '--json'], {
+      encoding: 'utf8',
+    });
+    const json = JSON.parse(res);
+    expect(json.error).toBe('no-provider');
+    expect(json.exitCode).toBe(0);
+  });
+
+  it('still exits 2 with no provider when the flag is absent', () => {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'cm-validate-noprov2-'));
+    tmpDirs.push(empty);
+    let status = 0;
+    try {
+      execFileSync('node', [script, `--root=${empty}`, '--json'], { encoding: 'utf8' });
+    } catch (err: any) {
+      status = err.status;
+    }
+    expect(status).toBe(2);
+  });
+
+  it('does not let --allow-missing-provider mask a failing provider', () => {
+    // The flag tolerates absence, never failure.
+    const { status } = report(
+      writeTree({
+        'code/core/container.setup.ts': PASSING['code/core/container.setup.ts'].replace(/.*PROVIDER_CLIENT.*\n/, ''),
+      }),
+    );
+    expect(status).toBe(1);
+    const broken = writeTree({
+      'code/core/container.setup.ts': PASSING['code/core/container.setup.ts'].replace(/.*PROVIDER_CLIENT.*\n/, ''),
+    });
+    let withFlag = 0;
+    try {
+      execFileSync('node', [script, `--root=${broken}`, '--provider=testco', '--allow-missing-provider'], {
+        encoding: 'utf8',
+      });
+    } catch (err: any) {
+      withFlag = err.status;
+    }
+    expect(withFlag).toBe(1);
   });
 
   it('exits 0 when only minor criteria fail', () => {

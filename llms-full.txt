@@ -2342,6 +2342,8 @@ Review runs as a two-stage gate:
 
 The command orchestrates both stages, consolidates one report grouped by severity with file references, and **confirms with you before applying any fix**.
 
+CI runs this on every pull request (`.github/workflows/ci.yml`) with `--allow-missing-provider`, which exits 0 on the bare template where having no provider is the normal state. A provider that *is* present still has to pass every criterion.
+
 For an orchestrating agent, `npm run validate:provider -- --json` emits the whole result set as one JSON document and suppresses the prose. Each result carries `id`, `severity`, `passed`, `detail`, `file`, `line`, and — where the check is structural only — a `semanticGap` string naming what a human still has to judge. A separate `notChecked` array names the criteria the script deliberately does not touch, with the reason. Exit codes are the same either way: `0` all Critical and Major pass, `1` something failed, `2` no provider found.
 
 **Legend**
@@ -2365,7 +2367,7 @@ These are blockers. Code will not work correctly without them.
 |---|---|---|---|
 | C1 | ⚙ | `PROVIDER_CLIENT` registered in `container.setup.ts` | Grep: `ServiceToken.PROVIDER_CLIENT` |
 | C2 | ⚙ | `PROVIDER_SERVICE` registered in `container.setup.ts` | Grep: `ServiceToken.PROVIDER_SERVICE` |
-| C3 | ⚙ | Webhook signature verification present in `webhook-hooks.ts` | Grep: `verifyWebhookSignature` in `code/webhook-hooks.ts` |
+| C3 | ⚙ | Webhook signature verification present in `webhook-hooks.ts` | A **live** call to `verifyWebhookSignature` in `code/webhook-hooks.ts`. Comments are stripped first: the template ships this file with the call present only inside a commented-out example, and a raw text search would pass it |
 | C4 | ⚙ | No `// TODO` stubs remaining in service methods | Grep: `TODO: implement` in `code/services/{provider}.service.ts`. Comments are scanned deliberately — the scaffolder writes its stub markers as `//` comments |
 | C5 | ⚙ | `statusMap` in adapter is not empty | At least one `PaymentStatus.*` entry inside the adapter's `statusMap` literal |
 | C6 | ⚙ | Event constants use real names (not placeholders) | `code/interfaces/{provider}-events.ts` contains no `actual.event.*` / `provider.payment.*` / `TODO` / `placeholder` values |
@@ -2384,9 +2386,9 @@ These won't cause immediate failures but will cause silent bugs or maintenance p
 | M1 | ⚙ | All service methods use `retryWithBackoff()` for API calls | Grep: `retryWithBackoff` in `code/services/{provider}.service.ts` |
 | M2 | ⚙ | Every public service method logs as its first statement | Each public method on the service class is parsed; its first statement must be a `this.logService.*(...)` call. The constructor and `private`/`protected` helpers are exempt — the criterion is about the service's public surface |
 | M3 | ⚙ | Errors thrown as `ModuleError`, not raw | Grep: `throw new Error` in the service (should be `ModuleError`) |
-| M4 | ⚙🔎 | Lifecycle hooks: `afterPolicyIssued` creates customer + stores in `app_data` | **Script:** the hook resolves `ServiceToken.PROVIDER_SERVICE` and awaits a call on it, in live (non-commented) code. **Reviewer:** whether it creates a customer and writes the id to the right `app_data` key |
-| M5 | ⚙🔎 | Lifecycle hooks: `afterPaymentCreated` fires payment intent | **Script:** same structural check on `code/lifecycle-hooks/payment.hooks.ts`. **Reviewer:** whether the amount, currency and customer are right |
-| M6 | ⚙🔎 | Lifecycle hooks: `afterPolicyPaymentMethodAssigned` attaches payment method | **Script:** same structural check on `code/lifecycle-hooks/payment-method.hooks.ts`. **Reviewer:** whether it attaches to the right provider customer |
+| M4 | ⚙🔎 | Lifecycle hooks: `afterPolicyIssued` creates customer + stores in `app_data` | **Script:** the hook assigns `ServiceToken.PROVIDER_SERVICE` to a variable and awaits a call **on that variable**, in live code. The detail names the method it calls, and says so when that method isn't on `PaymentProviderService`. **Reviewer:** whether it creates a customer and writes the id to the right `app_data` key |
+| M5 | ⚙🔎 | Lifecycle hooks: `afterPaymentCreated` fires payment intent | **Script:** same binding check on `code/lifecycle-hooks/payment.hooks.ts`. **Reviewer:** whether the amount, currency and customer are right |
+| M6 | ⚙🔎 | Lifecycle hooks: `afterPolicyPaymentMethodAssigned` attaches payment method | **Script:** same binding check on `code/lifecycle-hooks/payment-method.hooks.ts`. **Reviewer:** whether it attaches to the right provider customer |
 | M7 | ⚙🔎 | Webhook routing handles at least `payment_success` and `payment_failed` events | **Script:** `code/webhook-hooks.ts` has a live `switch` with ≥2 non-default `case` clauses. **Reviewer:** whether those are this provider's success and failure events — the names are provider-specific, so S1 is what closes this |
 | M8 | ⚙ | No `console.log` in service or controller code | Grep: `console.log` across `code/`, excluding `code/services/log.service.ts` — `LogService` is the sanctioned console sink |
 
