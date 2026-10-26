@@ -169,7 +169,7 @@ All docs: `01-GETTING-STARTED`, `03-PROVIDER-INTERFACE`, `04-CONTROLLERS`, `06-A
 
 ## Requirements
 
-- **Node.js** >= 18, **npm** >= 8
+- **Node.js** >= 24, **npm** >= 8
 - **Root Platform account** — [rootplatform.com](https://rootplatform.com)
 - **`ANTHROPIC_API_KEY`** — optional, enhances `extract:spec` with AI extraction
 - **`root-platform-cli`** — only for deployment: `npm i -g root-platform-cli`

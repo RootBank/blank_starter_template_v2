@@ -124,7 +124,7 @@ console.log('\n── Step 1: Node.js version ───────────�
 
 const requiredNode = fs.existsSync(NVMRC)
   ? parseInt(fs.readFileSync(NVMRC, 'utf8').trim(), 10)
-  : 18;
+  : 24;
 
 const currentNode = parseInt(process.version.slice(1).split('.')[0], 10);
 
@@ -180,6 +180,7 @@ const rootConfigContent = JSON.stringify({
   collectionModuleName: cmName,
   organizationId: orgId || '00000000-0000-0000-0000-000000000000',
   host: rootHost,
+  stack: 'root-node-24',
   settings: { legacyCodeExecution: false },
   manualTransactions: [],
 }, null, 2);

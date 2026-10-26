@@ -373,7 +373,7 @@ This guide walks you through setting up the collection module template for local
 
 | Requirement | Minimum Version | Check Command |
 |---|---|---|
-| Node.js | 18.0.0+ | `node --version` |
+| Node.js | 24.0.0+ | `node --version` |
 | npm | 8.0.0+ | `npm --version` |
 | TypeScript | (bundled via devDependencies) | `npx tsc --version` |
 | Root Platform account | -- | [rootplatform.com](https://rootplatform.com) |
