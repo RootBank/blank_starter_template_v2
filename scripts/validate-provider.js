@@ -41,7 +41,7 @@
  * Exit codes:
  *   0  all Critical and (mechanizable) Major checks pass, or no provider is
  *      present and --allow-missing-provider was passed
- *   1  one or more checks failed
+ *   1  a Critical or Major check failed (a failing Minor still exits 0)
  *   2  usage / no provider found
  */
 
@@ -116,6 +116,25 @@ const SERVICE_METHODS = [
 // Control-flow keywords read as a method name when followed by `(`. Belt and
 // braces alongside the class-body bound in publicMethods().
 const RESERVED = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'do', 'else', 'with']);
+
+// Keywords after which a `/` opens a regex rather than dividing. `return /'/` is
+// the one that matters: without this, the quote opens a phantom string, a later
+// `//` is left unblanked, and C3 passes a commented-out signature check.
+const REGEX_PRECEDING_KEYWORDS = new Set([
+  'return',
+  'typeof',
+  'case',
+  'in',
+  'instanceof',
+  'yield',
+  'throw',
+  'delete',
+  'void',
+  'new',
+  'do',
+  'else',
+  'await',
+]);
 
 // ─── Checks ──────────────────────────────────────────────────────────────────
 
@@ -592,15 +611,21 @@ function stripComments(text) {
 /**
  * Is the `/` at `index` the start of a regex literal rather than a division
  * sign? Division can only follow a value, so a `/` in prefix position — after an
- * operator, a comma, an opening bracket, or nothing at all — opens a regex.
+ * operator, a comma, an opening bracket, or nothing at all — opens a regex. A
+ * word before it is a value only when it is an identifier; a keyword is not.
  */
 function startsRegex(text, index) {
-  for (let i = index - 1; i >= 0; i -= 1) {
-    const c = text[i];
-    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') continue;
-    return !/[A-Za-z0-9_$)\]."'`]/.test(c);
-  }
-  return true;
+  let i = index - 1;
+  while (i >= 0 && /\s/.test(text[i])) i -= 1;
+  if (i < 0) return true;
+  const c = text[i];
+  if (!/[A-Za-z0-9_$]/.test(c)) return !/[)\]."'`]/.test(c);
+  // An identifier character: read the whole word back and ask whether it is a
+  // keyword (regex follows) or a value such as a variable name (division).
+  let end = i + 1;
+  while (i >= 0 && /[A-Za-z0-9_$]/.test(text[i])) i -= 1;
+  const word = text.slice(i + 1, end);
+  return REGEX_PRECEDING_KEYWORDS.has(word);
 }
 
 /**

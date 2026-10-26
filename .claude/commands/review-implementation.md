@@ -17,7 +17,7 @@ cd collection_module && npm run validate:provider   # auto-detects the provider
 cd collection_module && npm test
 ```
 
-`validate:provider` hard-fails on the mechanized criteria — C1–C6, C8, M1–M8 and m1–m5. If it exits non-zero, report the failures and stop; those come first. `npm test` covers C7, which the script deliberately leaves alone.
+`validate:provider` hard-fails on C1–C6, C8 and M1–M8. The minor criteria m1–m5 are checked and reported, but they do not change the exit code, so read the `results` array (or the `✗` lines), not only the exit code: a run that exits 0 can still have failing minors. If it exits non-zero, report the failures and stop; those come first. `npm test` covers C7, which the script deliberately leaves alone.
 
 Add `--json` to get the result set as one parseable document instead of prose:
 

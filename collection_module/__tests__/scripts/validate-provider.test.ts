@@ -673,6 +673,36 @@ export async function afterPolicyIssued({ policy }: { policy: any }): Promise<vo
     expect(byId(json, 'm2').passed).toBe(true);
   });
 
+  it('fails C3 when a regex literal follows a keyword and the signature call is commented out', () => {
+    // `return /'/` is a regex, not division. Read as division, the quote opened a
+    // phantom string, the `//` below was left unblanked, and C3 passed a handler
+    // with no live signature check at all.
+    const { json } = report(
+      writeTree({
+        'code/webhook-hooks.ts': `const isQuoted = (s: string) => { return /'/.test(s); };
+
+export const processWebhookRequest = async (request: any) => {
+  // const isValid = providerClient.verifyWebhookSignature(request, SECRET);
+  const payload = JSON.parse(request.request.body as string);
+  return { response: { status: 200 } };
+};
+`,
+      }),
+    );
+    expect(byId(json, 'C3').passed).toBe(false);
+    expect(byId(json, 'C3').detail).toBe('no live call to verifyWebhookSignature');
+  });
+
+  it('never reports a check as failed because the script itself threw', () => {
+    // A ReferenceError inside a check is caught and surfaces as a failure, which
+    // looks exactly like a real finding. Two temporal-dead-zone bugs have hidden
+    // here, so assert no detail reads like a crash.
+    const { json } = report(writeTree());
+    for (const r of json.results) {
+      expect(r.detail).not.toMatch(/before initialization|is not defined|is not a function|Cannot read/);
+    }
+  });
+
   it('exempts LogService from M8 — it is the sanctioned console sink', () => {
     const { json } = report(
       writeTree({
