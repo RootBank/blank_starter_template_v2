@@ -63,6 +63,15 @@ export default class TestcoClient implements PaymentProviderClient {
   'code/services/testco.service.ts': `import { LogService } from './log.service';
 import { retryWithBackoff, ModuleError } from '../utils';
 
+// A module-level helper. Its \`if (\` sits at two-space indent, which is the
+// shape that used to read as a public method named \`if\`.
+function toCents(amount: number): number {
+  if (amount < 0) {
+    throw new ModuleError('amount must not be negative');
+  }
+  return Math.round(amount * 100);
+}
+
 export class TestcoService {
   constructor(
     private readonly logService: LogService,
@@ -130,6 +139,11 @@ export const TESTCO_WEBHOOK_SIGNING_SECRET = '';
   'code/webhook-hooks.ts': `import { getContainer } from './core/container.setup';
 import { ServiceToken } from './core/container';
 import { TESTCO_EVENTS } from './interfaces/testco-events';
+
+// A regex literal holding a quote, next to a string holding a comment opener.
+// Mis-read together, these blank the rest of the file.
+const QUOTE = /'/g;
+const BANNER = 'rate /* limit';
 
 export const processWebhookRequest = async (request: any) => {
   const container = getContainer();
@@ -609,6 +623,54 @@ export async function afterPolicyIssued({ policy }: { policy: any }): Promise<vo
     );
     expect(byId(json, 'M5').passed).toBe(true);
     expect(byId(json, 'M5').detail).toMatch(/not a PaymentProviderService method/);
+  });
+
+  it('ignores a module-level helper function when collecting service methods', () => {
+    // `function toCents(n) { if (n < 0) { ... } }` puts an `if (` at two-space
+    // indent. Counting it as a public method failed M2, which is Major, and so
+    // blocked the build on valid code.
+    const { status, json } = report(writeTree());
+    expect(byId(json, 'M2').passed).toBe(true);
+    expect(byId(json, 'M2').detail).not.toMatch(/\bif\b/);
+    expect(status).toBe(0);
+  });
+
+  it('still finds no methods, rather than phantom ones, in a file with no class', () => {
+    const { json } = report(
+      writeTree({
+        'code/services/testco.service.ts': `export function helper(n: number): number {
+  if (n < 0) {
+    return 0;
+  }
+  return n;
+}
+`,
+      }),
+    );
+    expect(byId(json, 'M2').passed).toBe(false);
+    expect(byId(json, 'M2').detail).toMatch(/no public methods/);
+  });
+
+  it('reads past a regex literal that contains a quote', () => {
+    // The quote inside /'/g used to open a phantom string, putting every later
+    // quote and comment marker one out of phase. A `/*` inside a real string
+    // then read as a comment and blanked the rest of the file, failing C3.
+    const { json } = report(writeTree());
+    expect(byId(json, 'C3').passed).toBe(true);
+    expect(byId(json, 'M7').passed).toBe(true);
+    expect(byId(json, 'm3').passed).toBe(true);
+  });
+
+  it('treats a division sign as division, not as the start of a regex', () => {
+    const { json } = report(
+      writeTree({
+        'code/adapters/testco-to-root-adapter.ts': PASSING['code/adapters/testco-to-root-adapter.ts'].replace(
+          'testco_email: providerCustomer.email ?? null,',
+          'testco_rate: providerCustomer.total / providerCustomer.count,',
+        ),
+      }),
+    );
+    expect(byId(json, 'm2').passed).toBe(true);
   });
 
   it('exempts LogService from M8 — it is the sanctioned console sink', () => {

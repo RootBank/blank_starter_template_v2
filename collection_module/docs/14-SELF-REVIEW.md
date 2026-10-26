@@ -17,7 +17,7 @@ The command orchestrates both stages, consolidates one report grouped by severit
 
 CI runs this on every pull request (`.github/workflows/ci.yml`) with `--allow-missing-provider`, which exits 0 on the bare template where having no provider is the normal state. A provider that *is* present still has to pass every criterion.
 
-For an orchestrating agent, `npm run validate:provider -- --json` emits the whole result set as one JSON document and suppresses the prose. Each result carries `id`, `severity`, `passed`, `detail`, `file`, `line`, and — where the check is structural only — a `semanticGap` string naming what a human still has to judge. A separate `notChecked` array names the criteria the script deliberately does not touch, with the reason. Exit codes are the same either way: `0` all Critical and Major pass, `1` something failed, `2` no provider found.
+For an orchestrating agent, `npm run validate:provider -- --json` emits the whole result set as one JSON document and suppresses the prose. Each result carries `id`, `severity`, `passed`, `detail`, `file`, `line`, and — where the check is structural only — a `semanticGap` string naming what a human still has to judge. A separate `notChecked` array names the criteria the script deliberately does not touch, with the reason. Exit codes are the same either way: `0` all Critical and Major pass, `1` a Critical or Major check failed, `2` no provider found. A failing Minor check is reported but still exits `0`.
 
 **Legend**
 

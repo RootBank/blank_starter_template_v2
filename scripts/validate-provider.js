@@ -113,6 +113,10 @@ const SERVICE_METHODS = [
   'cancelSubscription',
 ];
 
+// Control-flow keywords read as a method name when followed by `(`. Belt and
+// braces alongside the class-body bound in publicMethods().
+const RESERVED = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'do', 'else', 'with']);
+
 // ─── Checks ──────────────────────────────────────────────────────────────────
 
 const results = [];
@@ -556,11 +560,47 @@ function stripComments(text) {
         i += text[i] === '\\' ? 2 : 1;
       }
       i += 1;
+    } else if (c === '/' && startsRegex(text, i)) {
+      // A regex literal can carry a quote (`/'/g`). Left unrecognised, that quote
+      // opens a phantom string and every later quote and comment marker pairs up
+      // one out of phase, which can blank live code: a `/*` inside a real string
+      // then reads as a comment and silently removes the rest of the file.
+      i += 1;
+      let inClass = false;
+      while (i < text.length) {
+        const d = text[i];
+        if (d === '\\') {
+          i += 2;
+          continue;
+        }
+        if (d === '\n') break; // unterminated: it was a division sign after all
+        if (d === '[') inClass = true;
+        else if (d === ']') inClass = false;
+        else if (d === '/' && !inClass) {
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
     } else {
       i += 1;
     }
   }
   return out.join('');
+}
+
+/**
+ * Is the `/` at `index` the start of a regex literal rather than a division
+ * sign? Division can only follow a value, so a `/` in prefix position — after an
+ * operator, a comma, an opening bracket, or nothing at all — opens a regex.
+ */
+function startsRegex(text, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const c = text[i];
+    if (c === ' ' || c === '\t' || c === '\n' || c === '\r') continue;
+    return !/[A-Za-z0-9_$)\]."'`]/.test(c);
+  }
+  return true;
 }
 
 /**
@@ -613,11 +653,23 @@ function matchParen(text, open) {
 function publicMethods(raw, file) {
   const text = stripComments(raw);
   const methods = [];
+  // Confine the scan to the class body. The 2-space indent alone does not say
+  // "method": a module-level `function toCents(n) { if (n < 0) { ... } }` puts an
+  // `if (` at 2-space indent, which otherwise reads as a public method named
+  // `if` and fails M2 on perfectly valid code.
+  const classAt = text.search(/\bclass\s+[A-Za-z_$][\w$]*/);
+  if (classAt === -1) return methods;
+  const classOpen = text.indexOf('{', classAt);
+  const classClose = classOpen === -1 ? -1 : matchBrace(text, classOpen);
+  if (classClose === -1) return methods;
+
   const re = /^ {2}(?!\/\/)((?:public |private |protected |static |readonly )*)(?:(async)\s+)?([A-Za-z_$][\w$]*)\s*\(/gm;
+  re.lastIndex = classOpen;
   let m = re.exec(text);
-  while (m) {
+  while (m && m.index < classClose) {
     const [, modifiers, , name] = m;
-    const skip = name === 'constructor' || /\b(private|protected)\b/.test(modifiers);
+    const skip =
+      name === 'constructor' || RESERVED.has(name) || /\b(private|protected)\b/.test(modifiers);
     if (!skip) {
       const parenClose = matchParen(text, text.indexOf('(', m.index + m[0].length - 1));
       const braceOpen = findBodyBrace(text, parenClose);
