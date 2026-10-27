@@ -16,7 +16,8 @@
     "downlevelIteration": true,
     "noEmit": true,
     "types": [
-      "jest"
+      "jest",
+      "node"
     ]
   }
 }

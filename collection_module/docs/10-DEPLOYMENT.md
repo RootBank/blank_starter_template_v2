@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- `.root-config.json` with `collectionModuleKey`, `organizationId`, `host`, `stack`
+- `.root-config.json` with `collectionModuleKey`, `organizationId`, `host`
 - `.root-auth` with your Root Platform API key
 - `code/env.ts` populated with live credentials
 

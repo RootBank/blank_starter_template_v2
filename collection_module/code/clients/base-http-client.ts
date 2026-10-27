@@ -14,7 +14,6 @@
  * ```
  */
 
-import fetch, { RequestInit, Response } from 'node-fetch';
 import { retryWithBackoff } from '../utils/retry';
 import { withTimeout } from '../utils/timeout';
 
