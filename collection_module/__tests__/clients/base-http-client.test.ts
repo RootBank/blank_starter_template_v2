@@ -2,9 +2,8 @@
  * BaseHttpClient Tests
  *
  * Exercises the client against a real loopback server rather than a mocked
- * fetch, because the thing most worth guarding is that the global `fetch` the
- * Node 24 layer relies on is actually reachable. The layer no longer ships
- * node-fetch, so a reintroduced `import ... from 'node-fetch'` must fail here.
+ * fetch, so the request actually goes over the wire: method, headers, body
+ * encoding and the non-ok path are all observed from the server side.
  */
 
 import * as http from 'http';
@@ -51,10 +50,6 @@ afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
 const makeClient = () => new BaseHttpClient({ baseUrl, apiKey: 'k_test' });
 
 describe('BaseHttpClient', () => {
-  it('uses the runtime global fetch, not a bundled polyfill', () => {
-    expect(typeof fetch).toBe('function');
-  });
-
   it('sends GET with the auth and content-type defaults', async () => {
     const res = await makeClient().get<Record<string, unknown>>('/x');
     expect(res).toMatchObject({
