@@ -180,6 +180,8 @@ const rootConfigContent = JSON.stringify({
   collectionModuleName: cmName,
   organizationId: orgId || '00000000-0000-0000-0000-000000000000',
   host: rootHost,
+  // Keep in step with .nvmrc, which `requiredNode` above is parsed from. Not derived from it:
+  // nothing guarantees future stacks are named root-node-<major>.
   stack: 'root-node-24',
   settings: { legacyCodeExecution: false },
   manualTransactions: [],
