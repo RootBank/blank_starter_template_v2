@@ -9,7 +9,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
     "@rootplatform/node-sdk": "^0.0.7",
-    "joi": "^18.0.2",
+    "joi": "18.0.2",
     "node-fetch": "2.6.7",
     "pdf-parse": "^1.1.1",
     "phone": "2.4.22",
