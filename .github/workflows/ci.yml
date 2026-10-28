@@ -65,8 +65,9 @@ jobs:
         # longer matches the docs it is generated from.
         run: npm run build:llms:check
 
-      # TODO(human): add `npm run validate:provider` here once the script is reworked.
-      # It currently exits 2 when no provider implementation is present, which is the
-      # normal state of this template repo, so it cannot be a gate yet. Depends on the
-      # slice reworking scripts/validate-provider.js (adding --json and the missing
-      # criteria from docs/14-SELF-REVIEW.md).
+      - name: Validate provider
+        # --allow-missing-provider exits 0 on the bare template, where having no
+        # provider is the normal state. The gate still travels with the template:
+        # the moment a module built from it adds a provider, every criterion in
+        # docs/14-SELF-REVIEW.md gates that module's pull requests.
+        run: npm run validate:provider -- --allow-missing-provider
