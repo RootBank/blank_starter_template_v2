@@ -1,0 +1,46 @@
+{
+  "name": "shape-batched-body-signature",
+  "event": "notifications.batched",
+  "shape": "batched-body-signature",
+  "description": "Format demonstration: the signature lives inside the body rather than a header, is base64, is keyed on a hex-decoded secret, and covers a joined list of specific fields rather than the whole body. Adyen has this form.",
+  "notes": "A format demonstration, not a verified Adyen fixture. TODO(human): Adyen escapes backslashes and colons inside each field before joining, and the exact field order is version-specific — confirm both against their HMAC signature docs before using this against a real Adyen integration. The explicit `secret` below is a throwaway hex key so secretEncoding:hex has something valid to decode; a real run must use the module's configured secret.",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "signature": {
+    "scheme": "hmac-sha256-base64",
+    "placement": "body-path",
+    "path": "notificationItems.0.NotificationRequestItem.additionalData.hmacSignature",
+    "secret": "5EC2F8B4A1D0C3E6F9B7A4D1C8E5F2B9A6D3C0E7F4B1A8D5C2E9F6B3A0D7C4E1",
+    "secretEncoding": "hex",
+    "payloadTemplate": "{field:notificationItems.0.NotificationRequestItem.pspReference}:{field:notificationItems.0.NotificationRequestItem.originalReference}:{field:notificationItems.0.NotificationRequestItem.merchantAccountCode}:{field:notificationItems.0.NotificationRequestItem.merchantReference}:{field:notificationItems.0.NotificationRequestItem.amount.value}:{field:notificationItems.0.NotificationRequestItem.amount.currency}:{field:notificationItems.0.NotificationRequestItem.eventCode}:{field:notificationItems.0.NotificationRequestItem.success}"
+  },
+  "body": {
+    "live": "false",
+    "notificationItems": [
+      {
+        "NotificationRequestItem": {
+          "eventCode": "AUTHORISATION",
+          "success": "true",
+          "pspReference": "SIM0000000000001",
+          "originalReference": "",
+          "merchantAccountCode": "SimulatorMerchantAccount",
+          "merchantReference": "3c7a9e55-0000-4000-8000-000000000005",
+          "eventDate": "2026-10-19T08:00:00+02:00",
+          "paymentMethod": "sepadirectdebit",
+          "amount": {
+            "value": 24900,
+            "currency": "ZAR"
+          },
+          "additionalData": {
+            "hmacSignature": ""
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "status": 200
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "payment-failed",
+  "event": "payment.failed",
+  "shape": "flat",
+  "description": "Terminal failure for a single payment, carrying the failure reason the adapter maps onto a Root payment update.",
+  "notes": "failure_code / failure_message are placeholders. TODO(human): replace with the provider's documented failure codes before relying on this fixture to exercise your status map — see docs/06-ADAPTERS.md.",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "signature": {
+    "scheme": "hmac-sha256-hex",
+    "placement": "header",
+    "header": "X-Webhook-Signature",
+    "payloadTemplate": "{body}"
+  },
+  "body": {
+    "id": "evt_sim_payment_failed_0001",
+    "type": "payment.failed",
+    "created": 1760000600,
+    "data": {
+      "object": {
+        "id": "pay_sim_0002",
+        "object": "payment",
+        "status": "failed",
+        "amount": 24900,
+        "currency": "ZAR",
+        "customer": "cus_sim_0001",
+        "payment_method": "pm_sim_0001",
+        "failure_code": "insufficient_funds",
+        "failure_message": "The account had insufficient funds.",
+        "metadata": {
+          "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+          "payment_id": "3c7a9e55-0000-4000-8000-000000000003"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": 200
+  }
+}

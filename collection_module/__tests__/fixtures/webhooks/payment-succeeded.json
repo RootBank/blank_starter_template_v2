@@ -1,0 +1,40 @@
+{
+  "name": "payment-succeeded",
+  "event": "payment.succeeded",
+  "shape": "flat",
+  "description": "Terminal success for a single payment. The baseline fixture every collection module should pass.",
+  "notes": "Signed the way the scaffolder's generated HTTP client verifies: HMAC-SHA256 hex over the raw body, in the --webhook-header header. See scripts/scaffold-provider.js clientHttpTemplate().",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "signature": {
+    "scheme": "hmac-sha256-hex",
+    "placement": "header",
+    "header": "X-Webhook-Signature",
+    "payloadTemplate": "{body}"
+  },
+  "body": {
+    "id": "evt_sim_payment_succeeded_0001",
+    "type": "payment.succeeded",
+    "created": 1760000000,
+    "data": {
+      "object": {
+        "id": "pay_sim_0001",
+        "object": "payment",
+        "status": "succeeded",
+        "amount": 24900,
+        "currency": "ZAR",
+        "customer": "cus_sim_0001",
+        "payment_method": "pm_sim_0001",
+        "metadata": {
+          "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+          "payment_id": "3c7a9e55-0000-4000-8000-000000000002"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": 200
+  }
+}

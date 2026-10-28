@@ -1,0 +1,39 @@
+{
+  "name": "shape-timestamped-signature",
+  "event": "payment.succeeded.timestamped",
+  "shape": "flat",
+  "description": "Format demonstration: the signed payload includes a timestamp and the header carries more than the bare digest. Stripe's scheme has this form (t=<ts>,v1=<hmac> over \"<ts>.<body>\").",
+  "notes": "A format demonstration, not a verified Stripe fixture. TODO(human): if you are integrating Stripe, confirm the scheme and tolerance window against their current webhook docs before copying this. Run with --timestamp=<unix seconds> to make the digest reproducible.",
+  "transport": {
+    "method": "POST",
+    "contentType": "application/json"
+  },
+  "signature": {
+    "scheme": "hmac-sha256-hex",
+    "placement": "header",
+    "header": "Stripe-Signature",
+    "payloadTemplate": "{timestamp}.{body}",
+    "valueTemplate": "t={timestamp},v1={signature}"
+  },
+  "body": {
+    "id": "evt_sim_timestamped_0001",
+    "type": "payment.succeeded.timestamped",
+    "created": 1760000000,
+    "data": {
+      "object": {
+        "id": "pi_sim_0001",
+        "object": "payment_intent",
+        "status": "succeeded",
+        "amount": 24900,
+        "currency": "zar",
+        "metadata": {
+          "policy_id": "8f1b4d2e-0000-4000-8000-000000000001",
+          "payment_id": "3c7a9e55-0000-4000-8000-000000000004"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": 200
+  }
+}
