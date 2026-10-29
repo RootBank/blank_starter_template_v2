@@ -3,7 +3,7 @@
   "include": ["./code/**/*"],
   "exclude": ["./__tests__/**/*"],
   "compilerOptions": {
-    "lib": ["es2022", "dom"],
+    "lib": ["es2023", "dom"],
     "skipLibCheck": true,
     "noEmit": false,
     "outDir": "./dist",
@@ -11,7 +11,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "module": "commonjs",
-    "target": "es2022",
+    "target": "es2023",
     "moduleResolution": "node",
     "esModuleInterop": true
   }
