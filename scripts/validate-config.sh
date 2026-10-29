@@ -61,6 +61,12 @@ else
         echo "   Update organizationId with your actual Root organization ID."
         WARNINGS=$((WARNINGS + 1))
     fi
+
+    if ! grep -q '"stack"' .root-config.json; then
+        warning ".root-config.json has no \"stack\" key — this module will deploy to nodejs20.x"
+        echo "   Add \"stack\": \"root-node-24\" to match .nvmrc and package.json."
+        WARNINGS=$((WARNINGS + 1))
+    fi
 fi
 
 # Check for placeholder values in env.ts

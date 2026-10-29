@@ -31,9 +31,10 @@ export default class StripeClient implements PaymentProviderClient {
 
   constructor() {
     const config = getConfigService();
-    this.sdk = new Stripe(config.get('providerSecretKey'), {
-      apiVersion: '2023-10-16',
-    });
+    // apiVersion is intentionally omitted: the stripe pin in package.json IS the
+    // API version pin, and it must match the layer's. Hand-setting a version here
+    // is a type error against the pinned SDK.
+    this.sdk = new Stripe(config.get('providerSecretKey'));
   }
 
   verifyWebhookSignature(request: WebhookRequest, secret: string): boolean {
